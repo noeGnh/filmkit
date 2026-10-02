@@ -1,0 +1,2 @@
+pattern(){ W=$1; H=$2; R=$3; D=$4; HW=$((W/2)); HH=$((H/2));
+echo "color=red:s=${HW}x${HH}:r=${R}:d=${D}[tl];color=0x00ff00:s=${HW}x${HH}:r=${R}:d=${D}[tr];color=blue:s=${HW}x${HH}:r=${R}:d=${D}[bl];color=white:s=${HW}x${HH}:r=${R}:d=${D}[br];[tl][tr]hstack[top];[bl][br]hstack[bot];[top][bot]vstack,format=yuv420p,geq=lum='if(between(Y,H*0.45,H*0.55),255*T/${D},lum(X,Y))':cb='if(between(Y,H*0.45,H*0.55),128,cb(X,Y))':cr='if(between(Y,H*0.45,H*0.55),128,cr(X,Y))'"; }
