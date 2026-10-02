@@ -1,8 +1,9 @@
+/// Photo and video editing for Flutter, exported natively.
+library;
 
-import 'filmkit_platform_interface.dart';
-
-class Filmkit {
-  Future<String?> getPlatformVersion() {
-    return FilmkitPlatform.instance.getPlatformVersion();
-  }
-}
+export 'src/edit_spec.dart';
+export 'src/exceptions.dart';
+export 'src/filmkit.dart';
+export 'src/filmkit_platform.dart';
+export 'src/video_export.dart';
+export 'src/video_info.dart';

@@ -4,14 +4,14 @@
 #
 Pod::Spec.new do |s|
   s.name             = 'filmkit'
-  s.version          = '0.0.1'
-  s.summary          = 'A new Flutter plugin project.'
+  s.version          = '0.1.0'
+  s.summary          = 'Native video export for Flutter.'
   s.description      = <<-DESC
-A new Flutter plugin project.
+Photo and video editing for Flutter, exported natively with AVFoundation.
                        DESC
-  s.homepage         = 'http://example.com'
+  s.homepage         = 'https://github.com/noeGnh/filmkit'
   s.license          = { :file => '../LICENSE' }
-  s.author           = { 'Your Company' => 'email@example.com' }
+  s.author           = { 'Noé Gnanih' => 'noegnanih@gmail.com' }
   s.source           = { :path => '.' }
   s.source_files = 'filmkit/Sources/filmkit/**/*'
   s.dependency 'Flutter'
