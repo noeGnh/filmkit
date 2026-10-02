@@ -29,8 +29,23 @@ Question: does a 3D LUT rendered by the Flutter shader (live preview) match the 
 - Preview vs export (E) is at the level of the video codec's own error (C): the LUT adds about +1 at p99 and +3 at max, consistent with the S-curve amplifying codec noise. That is ~5 % of the effect size (F), not visible.
 - The "one LUT for preview and export" architecture holds on Android.
 
+## iOS results (iPhone 18 Pro simulator, iOS 27.0, Impeller Metal)
+
+Same image and LUT; Core Image applies the 8-bit cube (`ios/.../FilmkitPlugin.swift`, `applyLutImage`) in three modes.
+
+| Comparison | mean | p95 | p99 | max |
+|---|---|---|---|---|
+| A. shader (identity LUT) vs source | 0.00 | 0 | 0 | 0 |
+| B. shader (look) vs CPU reference | 0.00 | 0 | 0 | 1 |
+| `CIColorCube`, default context (linear working space) vs shader | 16.81 | 45 | 71 | 110 |
+| **`CIColorCubeWithColorSpace` (sRGB) vs shader** | 0.02 | 0 | 1 | 1 |
+| `CIColorCube`, color management disabled vs shader | 0.02 | 0 | 1 | 1 |
+
+- The shader is exact on Metal too.
+- Core Image's default applies the cube to linear values: the result is visibly wrong (banding, darker shadows). The LUT must be applied with `CIColorCubeWithColorSpace` in sRGB (or with color management disabled): then it matches the preview to 1/255.
+- For video (AVFoundation), the cube color space has to match the video frames' encoding (BT.709): to check in the AVFoundation spike.
+
 ## Not covered
 
-- iOS (`CIColorCube`): no simulator installed.
 - Real devices: the emulator uses a software H.264 encoder and its own GPU path; hardware encoders and 10-bit/HDR sources may differ.
 - The test image covers a 2D slice of the color cube, with a single LUT.

@@ -34,6 +34,13 @@ class _SpikePageState extends State<SpikePage> {
   final Map<String, Uint8List> _images = {};
   bool _running = false;
 
+  @override
+  void initState() {
+    super.initState();
+    // Simulators can't be tapped from the host: --dart-define=AUTORUN=true starts the run.
+    if (const bool.fromEnvironment('AUTORUN')) WidgetsBinding.instance.addPostFrameCallback((_) => _run());
+  }
+
   void _log(String line) {
     debugPrint('[spike] $line');
     setState(() => _lines.add(line));
@@ -55,6 +62,11 @@ class _SpikePageState extends State<SpikePage> {
 
       final shaderIdentity = await applyLutShader(source, identityLut);
       final shaderLook = await applyLutShader(source, lookLut);
+
+      if (Platform.isIOS) {
+        await _runIos(source, cpuLook, shaderIdentity, shaderLook, lookLut);
+        return;
+      }
 
       final dir = Directory.systemTemp.path;
       final sourcePath = '$dir/spike_source.png';
@@ -84,6 +96,23 @@ class _SpikePageState extends State<SpikePage> {
     } finally {
       setState(() => _running = false);
     }
+  }
+
+  /// iOS: Core Image instead of Media3, in its three color management modes.
+  Future<void> _runIos(Rgba source, Rgba cpuLook, Rgba shaderIdentity, Rgba shaderLook, List<List<int>> lookLut) async {
+    _log('A. shader (identity LUT) vs source:  ${compare(shaderIdentity, source)}');
+    _log('B. shader (look) vs CPU reference:     ${compare(shaderLook, cpuLook)}');
+    final images = <String, Rgba>{'source': source, 'shader look': shaderLook};
+    for (final mode in ['linear', 'srgbSpace', 'noColorManagement']) {
+      final ci = await applyLutCoreImage(source, lookLut, mode);
+      _log('CI $mode vs shader (look): ${compare(ci, shaderLook)}');
+      images['CI $mode'] = ci;
+    }
+    _log('F. shader (look) vs source (LUT effect size): ${compare(shaderLook, source)}');
+    for (final entry in images.entries) {
+      _images[entry.key] = await encodePng(entry.value);
+    }
+    _log('done');
   }
 
   @override
@@ -260,4 +289,16 @@ String compare(Rgba a, Rgba b) {
   final mean = diffs.reduce((s, v) => s + v) / diffs.length;
   int pct(double p) => diffs[((diffs.length - 1) * p).round()];
   return 'mean ${mean.toStringAsFixed(2)}  p95 ${pct(0.95)}  p99 ${pct(0.99)}  max ${diffs.last}';
+}
+
+Future<Rgba> applyLutCoreImage(Rgba src, List<List<int>> lut, String mode) async {
+  final bytes = await channel.invokeMethod<Uint8List>('applyLutImage', {
+    'rgba': src.bytes,
+    'width': src.width,
+    'height': src.height,
+    'lutSize': lutSize,
+    'lut': Int32List.fromList([for (final c in lut) (0xFF << 24) | (c[0] << 16) | (c[1] << 8) | c[2]]),
+    'mode': mode,
+  });
+  return Rgba(src.width, src.height, bytes!);
 }
