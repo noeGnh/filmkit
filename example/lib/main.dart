@@ -1,13 +1,18 @@
 // Video export spike: runs the same edit (trim 1.0–4.0 s, crop, resize) on each test video
 // with Media3 Transformer. The outputs are checked on the host with ffprobe / ffmpeg.
 
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 const MethodChannel channel = MethodChannel('filmkit');
 
-/// Where the host pushes the test videos (`adb shell run-as … cp`).
-const String base = '/data/user/0/dev.noegnh.filmkit_example/files/spike';
+/// Where the host pushes the test videos: the app files directory on Android (`adb shell
+/// run-as … cp`), the app container's tmp directory on the iOS simulator.
+final String base = Platform.isIOS
+    ? '${Directory.systemTemp.path}/spike'
+    : '/data/user/0/dev.noegnh.filmkit_example/files/spike';
 
 /// Test videos.
 const List<String> inputs = [
@@ -35,6 +40,13 @@ class SpikePage extends StatefulWidget {
 class _SpikePageState extends State<SpikePage> {
   final List<String> _lines = [];
   bool _running = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Simulators can't be tapped from the host: --dart-define=AUTORUN=true starts the run.
+    if (const bool.fromEnvironment('AUTORUN')) WidgetsBinding.instance.addPostFrameCallback((_) => _run());
+  }
 
   void _log(String line) {
     debugPrint('[spike] $line');
