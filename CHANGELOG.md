@@ -1,3 +1,8 @@
+## 0.6.2
+
+* Editor: pinch-to-zoom in the crop tool follows the fingers. When both fingers moved in the same frame, the second update started from the state before the first one: the zoom lagged and the image drifted sideways.
+* Widget tests for the editor screen, the crop view, the trim bar and `LutFilter` (with fake native code and video player), and a CI on GitHub Actions.
+
 ## 0.6.1
 
 * Android: `getVideoFrame` falls back to the closest key frame when the exact frame times out (4K 10-bit HDR videos on a Pixel 8a), instead of failing. Later frames of that file go straight to key frames.

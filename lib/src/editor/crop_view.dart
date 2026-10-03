@@ -25,23 +25,38 @@ class _CropViewState extends State<CropView> {
   Size _frame = Size.zero;
   double _lastScale = 1;
 
+  /// The latest state: several gesture updates can arrive before the parent rebuilds this
+  /// widget with the previous one (two fingers moving in the same frame).
+  late CropState _state = widget.state;
+
+  @override
+  void didUpdateWidget(CropView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _state = widget.state;
+  }
+
   void _onScaleStart(ScaleStartDetails details) => _lastScale = 1;
 
   void _onScaleUpdate(ScaleUpdateDetails details) {
     if (_frame.isEmpty) return;
-    var next = widget.state;
+    // First the pan, at the current zoom: the media point under the previous focal point moves
+    // under the new one (dragging the media right moves the frame left over it). Then the zoom
+    // around the new focal point, which keeps that point under the fingers.
+    var next = _state;
+    var rect = next.rect;
+    final delta = details.focalPointDelta;
+    next = next.panned(Offset(-delta.dx / _frame.width * rect.width, -delta.dy / _frame.height * rect.height));
     if (details.scale != _lastScale) {
-      final rect = next.rect;
+      rect = next.rect;
       final focal = details.localFocalPoint;
       final focalMedia = Offset(rect.left + focal.dx / _frame.width * rect.width, rect.top + focal.dy / _frame.height * rect.height);
       next = next.zoomed(details.scale / _lastScale, focalMedia);
       _lastScale = details.scale;
     }
-    // Dragging the media right moves the frame left over it.
-    final rect = next.rect;
-    final delta = details.focalPointDelta;
-    next = next.panned(Offset(-delta.dx / _frame.width * rect.width, -delta.dy / _frame.height * rect.height));
-    if (next != widget.state) widget.onChanged(next);
+    if (next != _state) {
+      _state = next;
+      widget.onChanged(next);
+    }
   }
 
   @override
