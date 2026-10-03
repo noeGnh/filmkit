@@ -123,4 +123,36 @@ void main() {
       expect((r - 0.6).abs() + (g - 0.4).abs() + (b - 0.3).abs(), greaterThan(0.02), reason: look.name);
     }
   });
+
+  group('EditorState', () {
+    test('round-trips through JSON', () {
+      const state = EditorState(
+        look: 'Film',
+        lookIntensity: 0.6,
+        adjustments: Adjustments(brightness: 0.2, contrast: -0.1, saturation: 0.3, warmth: -0.4),
+        aspect: CropAspect.portrait,
+        cropZoom: 1.5,
+        cropCenter: Offset(0.4, 0.55),
+        trimStart: Duration(milliseconds: 1200),
+        trimEnd: Duration(milliseconds: 4500),
+      );
+      expect(EditorState.fromJson(state.toJson()), state);
+    });
+
+    test('defaults survive an empty or JSON-decoded map', () {
+      expect(EditorState.fromJson(const {}), const EditorState());
+      // Integers where doubles are expected, as jsonDecode returns them.
+      final decoded = EditorState.fromJson({
+        'lookIntensity': 1,
+        'cropZoom': 2,
+        'cropCenter': [0, 1],
+        'adjustments': {'brightness': 1},
+        'aspect': {'label': '1:1', 'ratio': 1},
+      });
+      expect(decoded.cropZoom, 2.0);
+      expect(decoded.cropCenter, const Offset(0, 1));
+      expect(decoded.adjustments.brightness, 1.0);
+      expect(decoded.aspect, CropAspect.square);
+    });
+  });
 }

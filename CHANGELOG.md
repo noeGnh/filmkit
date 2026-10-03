@@ -1,3 +1,8 @@
+## 0.5.0
+
+* Re-editing: `EditorResult.state` (`EditorState`: look, intensity, adjustments, crop ratio / zoom / position, trim), serializable to JSON, and `FilmkitEditor.open(initialState:)` to reopen the editor where the user left off.
+* `EditorResult.lookIntensity`, `adjustments` and `aspect` now read from `state`.
+
 ## 0.4.0
 
 * Instagram-style editor: `FilmkitEditor.open(context, path:)` with filters (10 built-in looks generated in Dart, or your own `Look`s / `.cube` files) and their intensity, adjustments (brightness, contrast, saturation, warmth, baked into the same LUT), crop with ratios, pan and zoom, and video trim with a thumbnail strip. Returns an `EditorResult` (the `EditSpec`, and the exported file unless `EditorOptions.export` is false). Labels configurable with `EditorTexts`.

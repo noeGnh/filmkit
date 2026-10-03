@@ -4,6 +4,7 @@ import '../edit_spec.dart';
 import '../video_info.dart';
 import 'adjustments.dart';
 import 'crop_state.dart';
+import 'editor_state.dart';
 import 'looks.dart';
 
 /// The editor's labels, in English by default.
@@ -90,7 +91,7 @@ class EditorOptions {
 /// What the editor returns when the user taps Done.
 @immutable
 class EditorResult {
-  const EditorResult({required this.edit, this.export, this.look, this.lookIntensity = 1, this.adjustments = const Adjustments(), required this.aspect});
+  const EditorResult({required this.edit, this.export, this.look, required this.state});
 
   /// The edits. Its `lut`, if any, is a `.cube` file the editor wrote in the temporary
   /// directory (look and adjustments combined): copy it to keep the spec for later.
@@ -101,10 +102,14 @@ class EditorResult {
 
   /// The chosen filter, `null` for none.
   final Look? look;
-  final double lookIntensity;
-  final Adjustments adjustments;
-  final CropAspect aspect;
+
+  /// The user's choices, to reopen the editor with them (`FilmkitEditor.open(initialState:)`).
+  final EditorState state;
+
+  double get lookIntensity => state.lookIntensity;
+  Adjustments get adjustments => state.adjustments;
+  CropAspect get aspect => state.aspect!;
 
   @override
-  String toString() => 'EditorResult($edit, export: $export, look: ${look?.name}, adjustments: $adjustments)';
+  String toString() => 'EditorResult($edit, export: $export, $state)';
 }
