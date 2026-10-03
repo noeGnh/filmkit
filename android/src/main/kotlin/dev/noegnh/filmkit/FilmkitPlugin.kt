@@ -13,7 +13,8 @@ import java.util.concurrent.Executors
 
 /**
  * `filmkit` method channel: `exportVideo` ({id, input, output, edit, lut}), `cancelExport`
- * ({id}), `getVideoInfo` ({path}), `getVideoFrame` ({path, positionMs, maxDimension}).
+ * ({id}), `getVideoInfo` ({path}), `getVideoFrame` ({path, positionMs, maxDimension}),
+ * `exportImage` ({input, output, edit, lut, quality, keepLocation}).
  * Progress goes back to Dart as `onProgress` ({id, progress}).
  */
 class FilmkitPlugin :
@@ -52,6 +53,7 @@ class FilmkitPlugin :
             }
             "getVideoInfo" -> getVideoInfo(call.argument<String>("path")!!, result)
             "getVideoFrame" -> getVideoFrame(call, result)
+            "exportImage" -> exportImage(call, result)
             else -> result.notImplemented()
         }
     }
@@ -86,6 +88,22 @@ class FilmkitPlugin :
         executor.execute {
             val metadata = runCatching { VideoProbe.probe(path) }
             handler.post { metadata.fold({ result.success(it.toMap()) }) { result.reportError(it) } }
+        }
+    }
+
+    private fun exportImage(
+        call: MethodCall,
+        result: Result
+    ) {
+        val input = call.argument<String>("input")!!
+        val output = call.argument<String>("output")!!
+        val spec = EditSpec.fromMap(call.argument<Map<*, *>>("edit")!!)
+        val lut = Lut.fromMap(call.argument<Map<*, *>>("lut"))
+        val quality = call.argument<Number>("quality")!!.toInt()
+        val keepLocation = call.argument<Boolean>("keepLocation")!!
+        executor.execute {
+            val exported = runCatching { ImageExporter.export(input, output, spec, lut, quality, keepLocation) }
+            handler.post { exported.fold(result::success) { result.reportError(it) } }
         }
     }
 

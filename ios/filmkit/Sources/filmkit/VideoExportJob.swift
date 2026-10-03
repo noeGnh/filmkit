@@ -55,20 +55,12 @@ final class VideoExportJob {
     let cropRect = ExportGeometry.coreImageRect(displayWidth: metadata.width, displayHeight: metadata.height, crop: spec.crop)
     let scaleX = CGFloat(size.width) / cropRect.width
     let scaleY = CGFloat(size.height) / cropRect.height
-    let cube = lut.map { (size: $0.size, data: $0.cubeData) }
     // Frames arrive in displayed orientation; the output has its pixels rotated (no rotation tag).
     // The LUT comes first, on the decoded colors, as the preview applies it.
+    let lut = self.lut
     let handler: @Sendable (AVAsynchronousCIImageFilteringRequest) -> Void = { request in
       var image = request.sourceImage
-      if let cube {
-        // CIFilter isn't thread-safe: one per frame.
-        let filter = CIFilter(name: "CIColorCubeWithColorSpace")!
-        filter.setValue(cube.size, forKey: "inputCubeDimension")
-        filter.setValue(cube.data, forKey: "inputCubeData")
-        filter.setValue(Lut.colorSpace, forKey: "inputColorSpace")
-        filter.setValue(image, forKey: kCIInputImageKey)
-        image = filter.outputImage!
-      }
+      if let lut { image = lut.apply(to: image, colorSpace: Lut.videoColorSpace) }
       image = image
         .cropped(to: cropRect)
         .transformed(by: CGAffineTransform(translationX: -cropRect.minX, y: -cropRect.minY))

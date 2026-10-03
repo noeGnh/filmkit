@@ -37,6 +37,8 @@ void main() {
         case 'exportVideo':
           exportCalled.complete();
           return nativeExport.future;
+        case 'exportImage':
+          return {'path': '/out.jpg', 'width': 150, 'height': 200};
         case 'getVideoFrame':
           return {
             'width': 2,
@@ -198,5 +200,38 @@ void main() {
     final bytes = (await image.toByteData())!.buffer.asUint8List();
     expect(bytes, [255, 0, 0, 255, 0, 0, 255, 255]);
     image.dispose();
+  });
+
+  group('exportImage', () {
+    test('sends the spec, quality and location choice', () async {
+      final result = await platform.exportImage(
+        input: '/in.heic',
+        output: '/out.jpg',
+        edit: const EditSpec(crop: Rect.fromLTRB(0, 0, 0.5, 1)),
+        quality: 85,
+        keepLocation: true,
+      );
+      expect((result.path, result.width, result.height), ('/out.jpg', 150, 200));
+      final args = calls.single.arguments as Map;
+      expect(args['input'], '/in.heic');
+      expect(args['quality'], 85);
+      expect(args['keepLocation'], isTrue);
+      expect(args['lut'], isNull);
+      expect((args['edit'] as Map)['crop'], [0.0, 0.0, 0.5, 1.0]);
+    });
+
+    test('validates its arguments before calling native code', () async {
+      await expectLater(platform.exportImage(input: '/a.jpg', output: '/b.jpg', edit: const EditSpec(), quality: 0, keepLocation: false), throwsArgumentError);
+      await expectLater(platform.exportImage(input: '/a.jpg', output: '/a.jpg', edit: const EditSpec(), quality: 90, keepLocation: false), throwsArgumentError);
+      expect(calls, isEmpty);
+    });
+
+    test('maps native errors to FilmkitException', () async {
+      messenger.setMockMethodCallHandler(channel, (call) async => throw PlatformException(code: 'invalidInput', message: 'Not a supported image'));
+      await expectLater(
+        platform.exportImage(input: '/a.txt', output: '/b.jpg', edit: const EditSpec(), quality: 90, keepLocation: false),
+        throwsA(isA<FilmkitException>().having((e) => e.code, 'code', FilmkitErrorCode.invalidInput)),
+      );
+    });
   });
 }

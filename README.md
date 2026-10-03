@@ -2,7 +2,7 @@
 
 Photo and video editing for Flutter: crop, trim, LUT filters and adjustments, exported natively (Media3 Transformer on Android, AVFoundation on iOS), with an Instagram-style editor screen.
 
-> **Status**: 0.2, headless video export (trim, crop, resize, LUT filters) and filter preview. Photos and the editor screen come next.
+> **Status**: 0.3, headless video and photo export (trim, crop, resize, LUT filters) and filter preview. The editor screen comes next.
 
 ## Video export
 
@@ -26,6 +26,22 @@ try {
 // export.cancel() stops it and deletes the partial file.
 ```
 
+## Photo export
+
+```dart
+final result = await Filmkit.exportImage(
+  input: '/path/to/photo.heic',
+  output: '/path/to/photo.jpg',
+  edit: const EditSpec(crop: Rect.fromLTRB(0, 0.1, 1, 0.9), maxDimension: 2048, lut: '/path/to/look.cube'),
+  quality: 90,           // JPEG quality
+  keepLocation: false,   // GPS metadata removed by default
+);
+```
+
+- Input: JPEG, HEIC, PNG, WebP… Output: an sRGB JPEG.
+- The EXIF orientation is applied to the pixels, and the crop is in the displayed orientation, as for videos.
+- Capture date, camera, lens and exposure metadata are kept; the location only if `keepLocation` is true.
+
 ## Filters
 
 Filters are 3D LUTs in `.cube` files (Resolve, Photoshop, Lightroom…), applied with the same result by the preview and the export.
@@ -38,6 +54,7 @@ LutFilter(lut: look, intensity: 0.8, child: VideoPlayer(controller));
 
 // Export
 Filmkit.exportVideo(input: input, output: output, edit: const EditSpec(lut: '/path/to/look.cube', lutIntensity: 0.8));
+Filmkit.exportImage(input: photo, output: jpeg, edit: const EditSpec(lut: '/path/to/look.cube', lutIntensity: 0.8));
 ```
 
 - `CubeLut.generate` builds a table from a function, `encode()` writes it as `.cube`.
@@ -63,5 +80,5 @@ Requirements: Android API 24+, iOS 15+.
 
 - Dart tests: `flutter test`.
 - Native tests: `./gradlew :filmkit:testDebugUnitTest` in `example/android`; `RunnerTests` in `example/ios` (`xcodebuild test -workspace Runner.xcworkspace -scheme Runner -destination 'platform=iOS Simulator,name=<device>' -only-testing:RunnerTests`).
-- Export tests on a device: `flutter test integration_test -d <device>` in `example`, with the sample videos of `example/assets/videos` (colored quadrants and a gray band that encodes time, a color gradient, see `example/lib/sample_videos.dart`). They compare the export and the preview with the CPU reference pixel by pixel.
+- Export tests on a device: `flutter test integration_test -d <device>` in `example`, with the sample videos of `example/assets/videos` (colored quadrants and a gray band that encodes time, a color gradient) and photos of `example/assets/photos` (a gradient, the quadrant pattern in the 8 EXIF orientations with metadata), see `example/lib/sample_videos.dart`). They compare the export and the preview with the CPU reference pixel by pixel.
 - On the Android emulator, add `--dart-define=EMULATOR=true`: its graphics layer converts BT.709 video frames with the BT.601 matrix, which shifts the colors of every Media3 export there (test `export keeps the source colors`).

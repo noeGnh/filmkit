@@ -32,7 +32,7 @@ class VideoInfo {
   String toString() => 'VideoInfo(${width}x$height, duration: $duration, hasAudio: $hasAudio, isHdr: $isHdr)';
 }
 
-/// The file written by an export.
+/// The file written by an export (video or photo).
 @immutable
 class ExportResult {
   const ExportResult({required this.path, required this.width, required this.height});

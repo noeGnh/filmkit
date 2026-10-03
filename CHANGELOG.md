@@ -1,3 +1,7 @@
+## 0.3.0
+
+* Photo export: `Filmkit.exportImage` (JPEG, HEIC, PNG, WebP… in, JPEG out) with the same `EditSpec` as videos (crop in displayed coordinates, `maxDimension`, LUT). The EXIF orientation is applied to the pixels; capture date, camera and exposure metadata are kept, the location only with `keepLocation`. Android decodes only the cropped region at the needed resolution.
+
 ## 0.2.0
 
 * LUT filters: `CubeLut` (`.cube` parsing and writing, intensity, CPU reference), `EditSpec.lut` / `lutIntensity` applied by the export (Media3 `SingleColorLut`, Core Image `CIColorCubeWithColorSpace` in CoreMedia's BT.709 space), and the `LutFilter` widget for the live preview (shader), which renders the same colors.

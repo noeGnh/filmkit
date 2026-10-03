@@ -26,6 +26,10 @@ abstract class FilmkitPlatform extends PlatformInterface {
     throw UnimplementedError('exportVideo() has not been implemented.');
   }
 
+  Future<ExportResult> exportImage({required String input, required String output, required EditSpec edit, required int quality, required bool keepLocation}) {
+    throw UnimplementedError('exportImage() has not been implemented.');
+  }
+
   Future<VideoInfo> getVideoInfo(String path) {
     throw UnimplementedError('getVideoInfo() has not been implemented.');
   }

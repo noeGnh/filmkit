@@ -1,3 +1,4 @@
+import ImageIO
 import XCTest
 
 @testable import filmkit
@@ -50,5 +51,32 @@ class ExportGeometryTests: XCTestCase {
     XCTAssertEqual(Array(cube[0..<8]), expected)
     XCTAssertEqual(cube[31], 1)
     XCTAssertEqual(cube[30], 23 / 23)
+  }
+
+  func testImageOutputSizeRoundsWithoutTheEvenConstraint() {
+    let odd = ExportGeometry.imageOutputSize(displayWidth: 641, displayHeight: 359, crop: .full, maxDimension: nil)
+    XCTAssertEqual([odd.width, odd.height], [641, 359])
+    let small = ExportGeometry.imageOutputSize(displayWidth: 4000, displayHeight: 3000, crop: .full, maxDimension: 1080)
+    XCTAssertEqual([small.width, small.height], [1080, 810])
+  }
+
+  func testImageMetadataDropsTheLocationUnlessKept() {
+    let source: [CFString: Any] = [
+      kCGImagePropertyOrientation: 6,
+      kCGImagePropertyTIFFDictionary: [kCGImagePropertyTIFFMake: "FilmkitCam", kCGImagePropertyTIFFOrientation: 6] as [CFString: Any],
+      kCGImagePropertyExifDictionary: [kCGImagePropertyExifDateTimeOriginal: "2024:05:06 07:08:09", kCGImagePropertyExifPixelXDimension: 300]
+        as [CFString: Any],
+      kCGImagePropertyGPSDictionary: [kCGImagePropertyGPSMapDatum: "FILMKITDATUM"] as [CFString: Any],
+    ]
+    let stripped = ImageExporter.metadata(source, keepLocation: false)
+    XCTAssertEqual(stripped[kCGImagePropertyOrientation] as? Int, 1)
+    let tiff = stripped[kCGImagePropertyTIFFDictionary] as? [CFString: Any]
+    XCTAssertEqual(tiff?[kCGImagePropertyTIFFMake] as? String, "FilmkitCam")
+    XCTAssertEqual(tiff?[kCGImagePropertyTIFFOrientation] as? Int, 1)
+    let exif = stripped[kCGImagePropertyExifDictionary] as? [CFString: Any]
+    XCTAssertEqual(exif?[kCGImagePropertyExifDateTimeOriginal] as? String, "2024:05:06 07:08:09")
+    XCTAssertNil(exif?[kCGImagePropertyExifPixelXDimension])
+    XCTAssertNil(stripped[kCGImagePropertyGPSDictionary])
+    XCTAssertNotNil(ImageExporter.metadata(source, keepLocation: true)[kCGImagePropertyGPSDictionary])
   }
 }

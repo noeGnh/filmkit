@@ -10,8 +10,8 @@ import 'sample_videos.dart';
 
 void main() => runApp(const MaterialApp(home: ExportDemoPage()));
 
-/// Exports a bundled sample video with a few edit presets and an optional film look, previewed
-/// on a frame with [LutFilter].
+/// Exports a bundled sample video or photo with a few edit presets and an optional film look,
+/// previewed with [LutFilter].
 class ExportDemoPage extends StatefulWidget {
   const ExportDemoPage({super.key});
 
@@ -27,15 +27,20 @@ class _ExportDemoPageState extends State<ExportDemoPage> {
     'All': EditSpec(trimStart: Duration(seconds: 1), trimEnd: Duration(seconds: 4), crop: Rect.fromLTRB(0.25, 0, 0.75, 1), maxDimension: 320),
   };
 
-  Map<String, String>? _videos;
-  String _video = sampleVideos.first;
+  static final _names = [...sampleVideos, 'gradient.jpg', 'oriented_6.jpg', 'gradient.heic'];
+
+  /// Sample files by name.
+  Map<String, String>? _media;
+  String _name = _names.first;
+  bool get _isPhoto => !_name.endsWith('.mp4');
   String _preset = _presets.keys.first;
-  VideoInfo? _inputInfo;
+  String? _inputInfo;
   ui.Image? _frame;
   String? _lookPath;
   bool _look = false;
   double _intensity = 1;
 
+  bool _exporting = false;
   VideoExport? _export;
   double _progress = 0;
   String? _status;
@@ -43,11 +48,11 @@ class _ExportDemoPageState extends State<ExportDemoPage> {
   @override
   void initState() {
     super.initState();
-    copySampleVideos().then((videos) async {
+    Future.wait([copySampleVideos(), copySamplePhotos()]).then((copies) async {
       final lookPath = '${Directory.systemTemp.path}/film_look.cube';
       await File(lookPath).writeAsString(filmLook.encode());
       setState(() {
-        _videos = videos;
+        _media = {...copies[0], ...copies[1]};
         _lookPath = lookPath;
       });
       _loadInfo();
@@ -55,9 +60,23 @@ class _ExportDemoPageState extends State<ExportDemoPage> {
   }
 
   Future<void> _loadInfo() async {
-    final path = _videos![_video]!;
-    final info = await Filmkit.getVideoInfo(path);
-    final frame = await Filmkit.getVideoFrame(path, position: info.duration ~/ 2, maxDimension: 640);
+    final path = _media![_name]!;
+    final String info;
+    final ui.Image frame;
+    if (_isPhoto) {
+      // A small oriented sRGB JPEG decodes everywhere, HEIC included.
+      final preview = await Filmkit.exportImage(
+        input: path,
+        output: '${Directory.systemTemp.path}/filmkit_preview.jpg',
+        edit: const EditSpec(maxDimension: 640),
+      );
+      frame = await _decode(preview.path);
+      info = 'Photo';
+    } else {
+      final video = await Filmkit.getVideoInfo(path);
+      frame = await Filmkit.getVideoFrame(path, position: video.duration ~/ 2, maxDimension: 640);
+      info = '$video';
+    }
     if (!mounted) return frame.dispose();
     final old = _frame;
     setState(() {
@@ -65,6 +84,13 @@ class _ExportDemoPageState extends State<ExportDemoPage> {
       _frame = frame;
     });
     WidgetsBinding.instance.addPostFrameCallback((_) => old?.dispose());
+  }
+
+  static Future<ui.Image> _decode(String path) async {
+    final codec = await ui.instantiateImageCodec(await File(path).readAsBytes());
+    final image = (await codec.getNextFrame()).image;
+    codec.dispose();
+    return image;
   }
 
   @override
@@ -85,11 +111,37 @@ class _ExportDemoPageState extends State<ExportDemoPage> {
     );
   }
 
-  Future<void> _run() async {
-    final input = _videos![_video]!;
-    final output = '${Directory.systemTemp.path}/filmkit_demo_${_video.replaceAll('.mp4', '')}.mp4';
+  Future<void> _run() => _isPhoto ? _runPhoto() : _runVideo();
+
+  Future<void> _runPhoto() async {
+    final input = _media![_name]!;
+    final output = '${Directory.systemTemp.path}/filmkit_demo_${_name.split('.').first}.jpg';
+    setState(() {
+      _exporting = true;
+      _status = 'Exporting…';
+    });
+    final watch = Stopwatch()..start();
+    String status;
+    try {
+      final result = await Filmkit.exportImage(input: input, output: output, edit: _edit);
+      status = 'Done in ${watch.elapsedMilliseconds} ms\n$result';
+    } on FilmkitException catch (e) {
+      status = 'Failed: $e';
+    }
+    if (mounted) {
+      setState(() {
+        _exporting = false;
+        _status = status;
+      });
+    }
+  }
+
+  Future<void> _runVideo() async {
+    final input = _media![_name]!;
+    final output = '${Directory.systemTemp.path}/filmkit_demo_${_name.replaceAll('.mp4', '')}.mp4';
     final export = Filmkit.exportVideo(input: input, output: output, edit: _edit);
     setState(() {
+      _exporting = true;
       _export = export;
       _progress = 0;
       _status = 'Exporting…';
@@ -106,6 +158,7 @@ class _ExportDemoPageState extends State<ExportDemoPage> {
     }
     if (mounted) {
       setState(() {
+        _exporting = false;
         _export = null;
         _status = status;
       });
@@ -114,29 +167,29 @@ class _ExportDemoPageState extends State<ExportDemoPage> {
 
   @override
   Widget build(BuildContext context) {
-    final busy = _export != null;
+    final busy = _exporting;
     return Scaffold(
       appBar: AppBar(title: const Text('filmkit')),
-      body: _videos == null
+      body: _media == null
           ? const Center(child: CircularProgressIndicator())
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
                 DropdownMenu<String>(
-                  label: const Text('Video'),
-                  initialSelection: _video,
+                  label: const Text('Sample'),
+                  initialSelection: _name,
                   enabled: !busy,
-                  dropdownMenuEntries: [for (final v in sampleVideos) DropdownMenuEntry(value: v, label: v)],
+                  dropdownMenuEntries: [for (final v in _names) DropdownMenuEntry(value: v, label: v)],
                   onSelected: (v) {
                     setState(() {
-                      _video = v!;
+                      _name = v!;
                       _inputInfo = null;
                     });
                     _loadInfo();
                   },
                 ),
                 const SizedBox(height: 8),
-                Text(_inputInfo?.toString() ?? '…'),
+                Text(_inputInfo ?? '…'),
                 const SizedBox(height: 8),
                 if (_frame != null)
                   Center(
@@ -178,11 +231,11 @@ class _ExportDemoPageState extends State<ExportDemoPage> {
                   children: [
                     FilledButton(onPressed: busy ? null : _run, child: const Text('Export')),
                     const SizedBox(width: 8),
-                    OutlinedButton(onPressed: busy ? _export!.cancel : null, child: const Text('Cancel')),
+                    OutlinedButton(onPressed: _export?.cancel, child: const Text('Cancel')),
                   ],
                 ),
                 const SizedBox(height: 16),
-                if (busy) LinearProgressIndicator(value: _progress),
+                if (busy) LinearProgressIndicator(value: _export == null ? null : _progress),
                 if (_status != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_status!)),
               ],
             ),

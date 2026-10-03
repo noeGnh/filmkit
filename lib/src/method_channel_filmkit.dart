@@ -71,6 +71,33 @@ class MethodChannelFilmkit extends FilmkitPlatform {
     );
   }
 
+  @override
+  Future<ExportResult> exportImage({
+    required String input,
+    required String output,
+    required EditSpec edit,
+    required int quality,
+    required bool keepLocation,
+  }) async {
+    edit.validate();
+    if (input == output) throw ArgumentError.value(output, 'output', 'must differ from input');
+    if (quality < 1 || quality > 100) throw ArgumentError.value(quality, 'quality', 'must be in 1..100');
+    final lut = edit.lut == null ? null : await _loadLut(edit.lut!, edit.lutIntensity);
+    try {
+      final map = await methodChannel.invokeMapMethod<String, Object?>('exportImage', {
+        'input': input,
+        'output': output,
+        'edit': edit.toJson(),
+        'lut': lut == null ? null : {'size': lut.size, 'data': lut.data},
+        'quality': quality,
+        'keepLocation': keepLocation,
+      });
+      return ExportResult.fromMap(map!);
+    } on PlatformException catch (e) {
+      throw FilmkitException.fromPlatform(e);
+    }
+  }
+
   /// Native code gets the parsed table, already blended for [intensity].
   static Future<CubeLut> _loadLut(String path, double intensity) async {
     try {
