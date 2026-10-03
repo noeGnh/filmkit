@@ -2,7 +2,8 @@ import 'package:flutter/services.dart';
 
 /// Why an operation failed.
 enum FilmkitErrorCode {
-  /// The input is missing, unreadable or has no video track, or the trim starts after its end.
+  /// The input or the LUT is missing or unreadable, the input has no video track, or the trim
+  /// starts after its end.
   invalidInput,
 
   /// The export was cancelled with `VideoExport.cancel`.

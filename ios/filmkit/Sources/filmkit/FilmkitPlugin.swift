@@ -2,8 +2,9 @@ import AVFoundation
 import Flutter
 import UIKit
 
-/// `filmkit` method channel: `exportVideo` ({id, input, output, edit}), `cancelExport` ({id}),
-/// `getVideoInfo` ({path}). Progress goes back to Dart as `onProgress` ({id, progress}).
+/// `filmkit` method channel: `exportVideo` ({id, input, output, edit, lut}), `cancelExport`
+/// ({id}), `getVideoInfo` ({path}), `getVideoFrame` ({path, positionMs, maxDimension}).
+/// Progress goes back to Dart as `onProgress` ({id, progress}).
 public class FilmkitPlugin: NSObject, FlutterPlugin {
   private let channel: FlutterMethodChannel
   /// Running exports by id. Main thread only.
@@ -40,6 +41,17 @@ public class FilmkitPlugin: NSObject, FlutterPlugin {
           result(Self.flutterError(error))
         }
       }
+    case "getVideoFrame":
+      let url = URL(fileURLWithPath: args["path"] as! String)
+      let positionMs = (args["positionMs"] as! NSNumber).int64Value
+      let maxDimension = (args["maxDimension"] as? NSNumber)?.intValue
+      Task { @MainActor in
+        do {
+          result(try await VideoFrames.frame(url, positionMs: positionMs, maxDimension: maxDimension))
+        } catch {
+          result(Self.flutterError(error))
+        }
+      }
     default:
       result(FlutterMethodNotImplemented)
     }
@@ -51,6 +63,7 @@ public class FilmkitPlugin: NSObject, FlutterPlugin {
       input: URL(fileURLWithPath: args["input"] as! String),
       output: URL(fileURLWithPath: args["output"] as! String),
       spec: EditSpec(map: args["edit"] as! [String: Any]),
+      lut: Lut(map: args["lut"] as? [String: Any]),
       onProgress: { [channel] progress in channel.invokeMethod("onProgress", arguments: ["id": id, "progress": progress]) })
     jobs[id] = job
     job.start { [weak self] outcome in

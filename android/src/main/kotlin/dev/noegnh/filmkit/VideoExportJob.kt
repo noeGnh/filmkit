@@ -12,6 +12,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.effect.Crop
 import androidx.media3.effect.Presentation
+import androidx.media3.effect.SingleColorLut
 import androidx.media3.transformer.Composition
 import androidx.media3.transformer.EditedMediaItem
 import androidx.media3.transformer.EditedMediaItemSequence
@@ -34,6 +35,7 @@ internal class VideoExportJob(
     private val input: String,
     private val output: String,
     private val spec: EditSpec,
+    private val lut: Lut?,
     private val probeExecutor: Executor,
     private val onProgress: (Double) -> Unit,
     private val onDone: (Result<Map<String, Any>>) -> Unit
@@ -132,8 +134,10 @@ internal class VideoExportJob(
                 .setClippingConfiguration(clipping)
                 .build()
 
-        // Effects apply to displayed frames (after rotation); the rotation tag is kept.
+        // Effects apply to displayed frames (after rotation); the rotation tag is kept. The LUT
+        // comes first, on the decoded colors, as the preview applies it.
         val effects = mutableListOf<Effect>()
+        if (lut != null) effects += SingleColorLut.createFromCube(lut.toArgbCube())
         if (!spec.crop.isFull) {
             val (left, right, bottom, top) = ExportGeometry.cropNdc(spec.crop)
             effects += Crop(left, right, bottom, top)

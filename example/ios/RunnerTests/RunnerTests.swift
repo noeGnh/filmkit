@@ -40,4 +40,15 @@ class ExportGeometryTests: XCTestCase {
     let defaults = EditSpec(map: ["trimStartMs": NSNumber(value: 0), "trimEndMs": NSNull(), "crop": NSNull(), "maxDimension": NSNull()])
     XCTAssertEqual(defaults, EditSpec(trimStartMs: 0, trimEndMs: nil, crop: .full, maxDimension: nil))
   }
+
+  func testLutCubeDataIsRgbaWithRedVaryingFastest() {
+    let lut = Lut(size: 2, data: (0..<24).map { Float($0) / 23 })
+    let cube = lut.cubeData.withUnsafeBytes { Array($0.bindMemory(to: Float.self)) }
+    XCTAssertEqual(cube.count, 32)
+    // Entries keep their order; an alpha of 1 is added after each RGB triplet.
+    let expected: [Float] = [0, 1, 2].map { Float($0) / 23 } + [1] + [3, 4, 5].map { Float($0) / 23 } + [1]
+    XCTAssertEqual(Array(cube[0..<8]), expected)
+    XCTAssertEqual(cube[31], 1)
+    XCTAssertEqual(cube[30], 23 / 23)
+  }
 }

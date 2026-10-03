@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:filmkit/filmkit.dart';
 import 'package:filmkit/src/method_channel_filmkit.dart';
@@ -14,6 +16,8 @@ void main() {
   late List<MethodCall> calls;
   // Lets a test finish the native export call when it wants.
   late Completer<Object?> nativeExport;
+  // Completes when native code receives `exportVideo`.
+  late Completer<void> exportCalled;
 
   /// Simulates a native `onProgress` call.
   Future<void> sendProgress(String id, num progress) => messenger.handlePlatformMessage(
@@ -26,11 +30,19 @@ void main() {
     platform = MethodChannelFilmkit();
     calls = [];
     nativeExport = Completer();
+    exportCalled = Completer();
     messenger.setMockMethodCallHandler(channel, (call) async {
       calls.add(call);
       switch (call.method) {
         case 'exportVideo':
+          exportCalled.complete();
           return nativeExport.future;
+        case 'getVideoFrame':
+          return {
+            'width': 2,
+            'height': 1,
+            'rgba': Uint8List.fromList([255, 0, 0, 255, 0, 0, 255, 255]),
+          };
         case 'getVideoInfo':
           return {'width': 360, 'height': 640, 'durationMs': 6000, 'hasAudio': true, 'isHdr': false};
       }
@@ -59,7 +71,10 @@ void main() {
       'trimEndMs': 3000,
       'crop': [0.0, 0.0, 0.5, 1.0],
       'maxDimension': null,
+      'lut': null,
+      'lutIntensity': 1.0,
     });
+    expect(args['lut'], isNull);
 
     final id = args['id'] as String;
     await sendProgress(id, 0.25);
@@ -124,5 +139,64 @@ void main() {
     expect(info.hasAudio, isTrue);
     expect(info.isHdr, isFalse);
     expect((calls.single.arguments as Map)['path'], '/in.mp4');
+  });
+
+  group('LUT', () {
+    late Directory dir;
+    setUp(() => dir = Directory.systemTemp.createTempSync('filmkit_test'));
+    tearDown(() => dir.deleteSync(recursive: true));
+
+    String writeCube(String content) => (File('${dir.path}/look.cube')..writeAsStringSync(content)).path;
+
+    test('exportVideo sends the parsed table, blended for the intensity', () async {
+      final path = writeCube('LUT_3D_SIZE 2\n${List.filled(8, '1 0 0').join('\n')}\n');
+      final export = platform.exportVideo(
+        input: '/in.mp4',
+        output: '/out.mp4',
+        edit: EditSpec(lut: path, lutIntensity: 0.5),
+      );
+      await exportCalled.future;
+      final lut = (calls.single.arguments as Map)['lut'] as Map;
+      expect(lut['size'], 2);
+      // Entry (r=0, g=0, b=0): halfway between black and red.
+      expect((lut['data'] as Float32List).sublist(0, 3), [0.5, 0, 0]);
+      expect((calls.single.arguments as Map)['edit']['lut'], path);
+      nativeExport.complete({'path': '/out.mp4', 'width': 2, 'height': 2});
+      await export.result;
+    });
+
+    test('a missing or invalid LUT fails with invalidInput without calling native code', () async {
+      final invalid = writeCube('LUT_3D_SIZE 2\n0 0 0\n');
+      for (final path in ['${dir.path}/missing.cube', invalid]) {
+        final export = platform.exportVideo(
+          input: '/in.mp4',
+          output: '/out.mp4',
+          edit: EditSpec(lut: path),
+        );
+        await expectLater(export.result, throwsA(isA<FilmkitException>().having((e) => e.code, 'code', FilmkitErrorCode.invalidInput)));
+      }
+      expect(calls, isEmpty);
+    });
+
+    test('cancel while the LUT loads never starts the native export', () async {
+      final path = writeCube('LUT_3D_SIZE 2\n${List.filled(8, '0 0 0').join('\n')}\n');
+      final export = platform.exportVideo(
+        input: '/in.mp4',
+        output: '/out.mp4',
+        edit: EditSpec(lut: path),
+      );
+      await export.cancel();
+      await expectLater(export.result, throwsA(isA<FilmkitException>().having((e) => e.code, 'code', FilmkitErrorCode.cancelled)));
+      expect(calls.map((c) => c.method), ['cancelExport']);
+    });
+  });
+
+  test('getVideoFrame returns the native pixels as an image', () async {
+    final image = await platform.getVideoFrame('/in.mp4', position: const Duration(milliseconds: 1500), maxDimension: 320);
+    expect((image.width, image.height), (2, 1));
+    expect(calls.single.arguments, {'path': '/in.mp4', 'positionMs': 1500, 'maxDimension': 320});
+    final bytes = (await image.toByteData())!.buffer.asUint8List();
+    expect(bytes, [255, 0, 0, 255, 0, 0, 255, 255]);
+    image.dispose();
   });
 }

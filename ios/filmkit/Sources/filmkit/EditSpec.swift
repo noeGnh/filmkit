@@ -1,4 +1,5 @@
 import CoreGraphics
+import Flutter
 import Foundation
 
 /// Error reported to Dart as a `FilmkitException` with this `code` (a `FilmkitErrorCode` name).
@@ -66,4 +67,41 @@ enum ExportGeometry {
   }
 
   private static func even(_ value: CGFloat) -> Int { max(2, Int((value / 2).rounded()) * 2) }
+}
+
+/// A 3D LUT as sent by Dart: `size`³ RGB triplets in 0..1, red varying fastest.
+struct Lut {
+  let size: Int
+  let data: [Float]
+
+  /// The color space in which the table applies: CoreMedia's BT.709, the one of decoded SDR
+  /// video frames (and of `getVideoFrame`), so that the table grades the values the preview
+  /// shows. sRGB (right for still images) or ITU 709 give visibly different results. Public
+  /// as `CGColorSpace.coreMedia709` since iOS 18; created by name for older versions.
+  static let colorSpace = CGColorSpace(name: "kCGColorSpaceCoreMedia709" as CFString) ?? CGColorSpace(name: CGColorSpace.itur_709)!
+
+  init(size: Int, data: [Float]) {
+    precondition(data.count == size * size * size * 3, "LUT data must hold size³ × 3 values")
+    self.size = size
+    self.data = data
+  }
+
+  init?(map: [String: Any]?) {
+    guard let map, let size = (map["size"] as? NSNumber)?.intValue,
+      let typed = map["data"] as? FlutterStandardTypedData
+    else { return nil }
+    let data: [Float] = typed.data.withUnsafeBytes { Array($0.bindMemory(to: Float.self)) }
+    self.init(size: size, data: data)
+  }
+
+  /// `inputCubeData` of the Core Image color cube filters: RGBA floats, red varying fastest.
+  var cubeData: Data {
+    var rgba = [Float](repeating: 1, count: size * size * size * 4)
+    for i in 0..<(size * size * size) {
+      rgba[i * 4] = data[i * 3]
+      rgba[i * 4 + 1] = data[i * 3 + 1]
+      rgba[i * 4 + 2] = data[i * 3 + 2]
+    }
+    return rgba.withUnsafeBufferPointer { Data(buffer: $0) }
+  }
 }

@@ -1,6 +1,6 @@
 name: filmkit
 description: "Photo and video editing for Flutter: native export, LUT filters and an Instagram-style editor."
-version: 0.1.0
+version: 0.2.0
 homepage: https://github.com/noeGnh/filmkit
 publish_to: 'none'
 
@@ -40,6 +40,9 @@ flutter:
         pluginClass: FilmkitPlugin
       ios:
         pluginClass: FilmkitPlugin
+
+  shaders:
+    - shaders/lut.frag
 
   # To add assets to your plugin package, add an assets section, like this:
   # assets:

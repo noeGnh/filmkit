@@ -11,18 +11,22 @@ void main() {
         trimEnd: Duration(seconds: 4),
         crop: Rect.fromLTRB(0.25, 0, 1, 0.75),
         maxDimension: 1080,
+        lut: '/luts/warm.cube',
+        lutIntensity: 0.8,
       );
       expect(spec.toJson(), {
         'trimStartMs': 1500,
         'trimEndMs': 4000,
         'crop': [0.25, 0.0, 1.0, 0.75],
         'maxDimension': 1080,
+        'lut': '/luts/warm.cube',
+        'lutIntensity': 0.8,
       });
       expect(EditSpec.fromJson(spec.toJson()), spec);
     });
 
     test('defaults keep the whole video', () {
-      expect(const EditSpec().toJson(), {'trimStartMs': 0, 'trimEndMs': null, 'crop': null, 'maxDimension': null});
+      expect(const EditSpec().toJson(), {'trimStartMs': 0, 'trimEndMs': null, 'crop': null, 'maxDimension': null, 'lut': null, 'lutIntensity': 1.0});
       expect(EditSpec.fromJson(const {}), const EditSpec());
     });
 
@@ -43,6 +47,8 @@ void main() {
       invalid(const EditSpec(crop: Rect.fromLTRB(0, 0, 1.1, 1)));
       invalid(const EditSpec(crop: Rect.fromLTRB(0.5, 0, 0.5, 1)));
       invalid(const EditSpec(maxDimension: 1));
+      invalid(const EditSpec(lutIntensity: 1.5));
+      invalid(const EditSpec(lutIntensity: -0.1));
     });
 
     test('validate accepts valid specs', () {
