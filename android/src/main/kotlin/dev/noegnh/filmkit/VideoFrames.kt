@@ -9,6 +9,9 @@ import kotlin.math.max
 import kotlin.math.roundToInt
 
 internal object VideoFrames {
+    /** Files whose exact frames time out: only their key frames are decoded. */
+    private val keyFramesOnly: MutableSet<String> = java.util.Collections.synchronizedSet(HashSet())
+
     /**
      * The frame closest to [positionMs], rotation applied, as `{width, height, rgba}`. Blocking:
      * call it off the main thread.
@@ -27,14 +30,14 @@ internal object VideoFrames {
                 throw FilmkitError(FilmkitError.INVALID_INPUT, "Can't read $path: ${e.message}")
             }
             val timeUs = positionMs * 1000
-            val option = MediaMetadataRetriever.OPTION_CLOSEST
+            // The exact frame decodes every frame from the previous key frame, which the framework
+            // gives up on for heavy streams (4K 10-bit HDR on a Pixel 8a, after ~1.5 s): fall back to
+            // the closest key frame, and go straight to it for the next frames of the same file.
+            val exact = if (path in keyFramesOnly) null else frameAt(retriever, timeUs, MediaMetadataRetriever.OPTION_CLOSEST)
             val decoded =
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    val params = MediaMetadataRetriever.BitmapParams().apply { preferredConfig = Bitmap.Config.ARGB_8888 }
-                    retriever.getFrameAtTime(timeUs, option, params)
-                } else {
-                    retriever.getFrameAtTime(timeUs, option)
-                } ?: throw FilmkitError(FilmkitError.INVALID_INPUT, "No frame at $positionMs ms in $path")
+                exact
+                    ?: frameAt(retriever, timeUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)?.also { keyFramesOnly.add(path) }
+                    ?: throw FilmkitError(FilmkitError.INVALID_INPUT, "No frame at $positionMs ms in $path")
             val bitmap = scaled(argb(decoded), maxDimension)
             // ARGB_8888 is stored as R, G, B, A bytes.
             val buffer = ByteBuffer.allocate(bitmap.byteCount)
@@ -44,6 +47,18 @@ internal object VideoFrames {
             retriever.release()
         }
     }
+
+    private fun frameAt(
+        retriever: MediaMetadataRetriever,
+        timeUs: Long,
+        option: Int
+    ): Bitmap? =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val params = MediaMetadataRetriever.BitmapParams().apply { preferredConfig = Bitmap.Config.ARGB_8888 }
+            retriever.getFrameAtTime(timeUs, option, params)
+        } else {
+            retriever.getFrameAtTime(timeUs, option)
+        }
 
     private fun argb(bitmap: Bitmap): Bitmap = if (bitmap.config == Bitmap.Config.ARGB_8888) bitmap else bitmap.copy(Bitmap.Config.ARGB_8888, false)
 

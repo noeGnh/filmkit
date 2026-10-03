@@ -1,3 +1,8 @@
+## 0.6.1
+
+* Android: `getVideoFrame` falls back to the closest key frame when the exact frame times out (4K 10-bit HDR videos on a Pixel 8a), instead of failing. Later frames of that file go straight to key frames.
+* Editor: a video whose thumbnails fail still opens (without thumbnails). Before, 4K HDR videos showed "Can't open this file" on Android.
+
 ## 0.6.0
 
 * `CropState.fromRect`: a crop state from a normalized rect, e.g. the area chosen in a picker.
