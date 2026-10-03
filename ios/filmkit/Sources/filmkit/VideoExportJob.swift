@@ -7,15 +7,17 @@ final class VideoExportJob {
   private let input: URL
   private let output: URL
   private let spec: EditSpec
+  private let lut: Lut?
   private let onProgress: (Double) -> Void
   private var task: Task<Void, Never>?
   private var session: AVAssetExportSession?
   private var cancelled = false
 
-  init(input: URL, output: URL, spec: EditSpec, onProgress: @escaping (Double) -> Void) {
+  init(input: URL, output: URL, spec: EditSpec, lut: Lut?, onProgress: @escaping (Double) -> Void) {
     self.input = input
     self.output = output
     self.spec = spec
+    self.lut = lut
     self.onProgress = onProgress
   }
 
@@ -53,9 +55,21 @@ final class VideoExportJob {
     let cropRect = ExportGeometry.coreImageRect(displayWidth: metadata.width, displayHeight: metadata.height, crop: spec.crop)
     let scaleX = CGFloat(size.width) / cropRect.width
     let scaleY = CGFloat(size.height) / cropRect.height
+    let cube = lut.map { (size: $0.size, data: $0.cubeData) }
     // Frames arrive in displayed orientation; the output has its pixels rotated (no rotation tag).
+    // The LUT comes first, on the decoded colors, as the preview applies it.
     let handler: @Sendable (AVAsynchronousCIImageFilteringRequest) -> Void = { request in
-      let image = request.sourceImage
+      var image = request.sourceImage
+      if let cube {
+        // CIFilter isn't thread-safe: one per frame.
+        let filter = CIFilter(name: "CIColorCubeWithColorSpace")!
+        filter.setValue(cube.size, forKey: "inputCubeDimension")
+        filter.setValue(cube.data, forKey: "inputCubeData")
+        filter.setValue(Lut.colorSpace, forKey: "inputColorSpace")
+        filter.setValue(image, forKey: kCIInputImageKey)
+        image = filter.outputImage!
+      }
+      image = image
         .cropped(to: cropRect)
         .transformed(by: CGAffineTransform(translationX: -cropRect.minX, y: -cropRect.minY))
         .transformed(by: CGAffineTransform(scaleX: scaleX, y: scaleY))

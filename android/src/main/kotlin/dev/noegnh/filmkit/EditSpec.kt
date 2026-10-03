@@ -51,6 +51,32 @@ internal data class EditSpec(
     }
 }
 
+/** A 3D LUT as sent by Dart: `size`³ RGB triplets in 0..1, red varying fastest. */
+internal class Lut(
+    val size: Int,
+    val data: FloatArray
+) {
+    init {
+        require(data.size == size * size * size * 3) { "LUT data must hold size³ × 3 values" }
+    }
+
+    /** The table as `SingleColorLut.createFromCube` takes it: `cube[r][g][b]`, ARGB 8 bits. */
+    fun toArgbCube(): Array<Array<IntArray>> =
+        Array(size) { r ->
+            Array(size) { g ->
+                IntArray(size) { b ->
+                    val i = ((b * size + g) * size + r) * 3
+                    fun channel(c: Int) = (data[i + c].coerceIn(0f, 1f) * 255).roundToInt()
+                    (0xFF shl 24) or (channel(0) shl 16) or (channel(1) shl 8) or channel(2)
+                }
+            }
+        }
+
+    companion object {
+        fun fromMap(map: Map<*, *>?): Lut? = map?.let { Lut((it["size"] as Number).toInt(), it["data"] as FloatArray) }
+    }
+}
+
 internal data class OutputSize(
     val width: Int,
     val height: Int

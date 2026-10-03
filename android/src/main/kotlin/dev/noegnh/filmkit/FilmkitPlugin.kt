@@ -12,8 +12,9 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 /**
- * `filmkit` method channel: `exportVideo` ({id, input, output, edit}), `cancelExport` ({id}),
- * `getVideoInfo` ({path}). Progress goes back to Dart as `onProgress` ({id, progress}).
+ * `filmkit` method channel: `exportVideo` ({id, input, output, edit, lut}), `cancelExport`
+ * ({id}), `getVideoInfo` ({path}), `getVideoFrame` ({path, positionMs, maxDimension}).
+ * Progress goes back to Dart as `onProgress` ({id, progress}).
  */
 class FilmkitPlugin :
     FlutterPlugin,
@@ -50,6 +51,7 @@ class FilmkitPlugin :
                 result.success(null)
             }
             "getVideoInfo" -> getVideoInfo(call.argument<String>("path")!!, result)
+            "getVideoFrame" -> getVideoFrame(call, result)
             else -> result.notImplemented()
         }
     }
@@ -65,6 +67,7 @@ class FilmkitPlugin :
                 input = call.argument<String>("input")!!,
                 output = call.argument<String>("output")!!,
                 spec = EditSpec.fromMap(call.argument<Map<*, *>>("edit")!!),
+                lut = Lut.fromMap(call.argument<Map<*, *>>("lut")),
                 probeExecutor = executor,
                 onProgress = { channel.invokeMethod("onProgress", mapOf("id" to id, "progress" to it)) },
                 onDone = { outcome ->
@@ -83,6 +86,19 @@ class FilmkitPlugin :
         executor.execute {
             val metadata = runCatching { VideoProbe.probe(path) }
             handler.post { metadata.fold({ result.success(it.toMap()) }) { result.reportError(it) } }
+        }
+    }
+
+    private fun getVideoFrame(
+        call: MethodCall,
+        result: Result
+    ) {
+        val path = call.argument<String>("path")!!
+        val positionMs = call.argument<Number>("positionMs")!!.toLong()
+        val maxDimension = call.argument<Number>("maxDimension")?.toInt()
+        executor.execute {
+            val frame = runCatching { VideoFrames.frame(path, positionMs, maxDimension) }
+            handler.post { frame.fold(result::success) { result.reportError(it) } }
         }
     }
 

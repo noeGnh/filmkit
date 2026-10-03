@@ -1,3 +1,8 @@
+## 0.2.0
+
+* LUT filters: `CubeLut` (`.cube` parsing and writing, intensity, CPU reference), `EditSpec.lut` / `lutIntensity` applied by the export (Media3 `SingleColorLut`, Core Image `CIColorCubeWithColorSpace` in CoreMedia's BT.709 space), and the `LutFilter` widget for the live preview (shader), which renders the same colors.
+* `Filmkit.getVideoFrame`: a frame as displayed, optionally scaled down.
+
 ## 0.1.0
 
 * Headless video export: `Filmkit.exportVideo` with an `EditSpec` (trim, crop in displayed coordinates, max output size), progress, cancellation and several exports at once. Media3 Transformer on Android, AVFoundation on iOS. Output: MP4, H.264 + AAC, SDR.

@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 import 'edit_spec.dart';
@@ -26,5 +28,9 @@ abstract class FilmkitPlatform extends PlatformInterface {
 
   Future<VideoInfo> getVideoInfo(String path) {
     throw UnimplementedError('getVideoInfo() has not been implemented.');
+  }
+
+  Future<ui.Image> getVideoFrame(String path, {Duration position = Duration.zero, int? maxDimension}) {
+    throw UnimplementedError('getVideoFrame() has not been implemented.');
   }
 }

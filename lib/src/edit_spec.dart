@@ -9,7 +9,7 @@ import 'package:flutter/foundation.dart';
 /// [EditSpec.fromJson]) to be stored and exported later.
 @immutable
 class EditSpec {
-  const EditSpec({this.trimStart = Duration.zero, this.trimEnd, this.crop, this.maxDimension});
+  const EditSpec({this.trimStart = Duration.zero, this.trimEnd, this.crop, this.maxDimension, this.lut, this.lutIntensity = 1});
 
   /// Restores a spec written by [toJson].
   factory EditSpec.fromJson(Map<String, Object?> json) {
@@ -20,6 +20,8 @@ class EditSpec {
       trimEnd: trimEndMs == null ? null : Duration(milliseconds: trimEndMs),
       crop: crop == null ? null : Rect.fromLTRB(crop[0].toDouble(), crop[1].toDouble(), crop[2].toDouble(), crop[3].toDouble()),
       maxDimension: json['maxDimension'] as int?,
+      lut: json['lut'] as String?,
+      lutIntensity: (json['lutIntensity'] as num?)?.toDouble() ?? 1,
     );
   }
 
@@ -37,6 +39,12 @@ class EditSpec {
   /// `null` keeps the (cropped) source size.
   final int? maxDimension;
 
+  /// Path of a `.cube` file (see `CubeLut`) applied to the colors, `null` for none.
+  final String? lut;
+
+  /// Strength of [lut], from 0 (no effect) to 1 (the table as is).
+  final double lutIntensity;
+
   /// Throws an [ArgumentError] if the spec can't describe a valid export.
   void validate() {
     if (trimStart.isNegative) throw ArgumentError.value(trimStart, 'trimStart', 'must not be negative');
@@ -48,6 +56,7 @@ class EditSpec {
     }
     final max = maxDimension;
     if (max != null && max < 2) throw ArgumentError.value(max, 'maxDimension', 'must be at least 2');
+    if (lutIntensity < 0 || lutIntensity > 1) throw ArgumentError.value(lutIntensity, 'lutIntensity', 'must be in [0, 1]');
   }
 
   Map<String, Object?> toJson() => {
@@ -55,15 +64,23 @@ class EditSpec {
     'trimEndMs': trimEnd?.inMilliseconds,
     'crop': crop == null ? null : [crop!.left, crop!.top, crop!.right, crop!.bottom],
     'maxDimension': maxDimension,
+    'lut': lut,
+    'lutIntensity': lutIntensity,
   };
 
   @override
   bool operator ==(Object other) =>
-      other is EditSpec && other.trimStart == trimStart && other.trimEnd == trimEnd && other.crop == crop && other.maxDimension == maxDimension;
+      other is EditSpec &&
+      other.trimStart == trimStart &&
+      other.trimEnd == trimEnd &&
+      other.crop == crop &&
+      other.maxDimension == maxDimension &&
+      other.lut == lut &&
+      other.lutIntensity == lutIntensity;
 
   @override
-  int get hashCode => Object.hash(trimStart, trimEnd, crop, maxDimension);
+  int get hashCode => Object.hash(trimStart, trimEnd, crop, maxDimension, lut, lutIntensity);
 
   @override
-  String toString() => 'EditSpec(trimStart: $trimStart, trimEnd: $trimEnd, crop: $crop, maxDimension: $maxDimension)';
+  String toString() => 'EditSpec(trimStart: $trimStart, trimEnd: $trimEnd, crop: $crop, maxDimension: $maxDimension, lut: $lut, lutIntensity: $lutIntensity)';
 }
