@@ -1,4 +1,5 @@
 import CoreGraphics
+import CoreImage
 import Flutter
 import Foundation
 
@@ -66,6 +67,14 @@ enum ExportGeometry {
       width: (crop.right - crop.left) * width, height: (crop.bottom - crop.top) * height)
   }
 
+  /// Photo output size: as `outputSize`, rounded to the nearest pixel (no even constraint).
+  static func imageOutputSize(displayWidth: Int, displayHeight: Int, crop: CropRect, maxDimension: Int?) -> (width: Int, height: Int) {
+    let width = (crop.right - crop.left) * CGFloat(displayWidth)
+    let height = (crop.bottom - crop.top) * CGFloat(displayHeight)
+    let scale = maxDimension.map { min(1, CGFloat($0) / max(width, height)) } ?? 1
+    return (max(1, Int((width * scale).rounded())), max(1, Int((height * scale).rounded())))
+  }
+
   private static func even(_ value: CGFloat) -> Int { max(2, Int((value / 2).rounded()) * 2) }
 }
 
@@ -73,17 +82,39 @@ enum ExportGeometry {
 struct Lut {
   let size: Int
   let data: [Float]
+  /// `inputCubeData` of the Core Image color cube filters.
+  let cubeData: Data
 
-  /// The color space in which the table applies: CoreMedia's BT.709, the one of decoded SDR
-  /// video frames (and of `getVideoFrame`), so that the table grades the values the preview
-  /// shows. sRGB (right for still images) or ITU 709 give visibly different results. Public
-  /// as `CGColorSpace.coreMedia709` since iOS 18; created by name for older versions.
-  static let colorSpace = CGColorSpace(name: "kCGColorSpaceCoreMedia709" as CFString) ?? CGColorSpace(name: CGColorSpace.itur_709)!
+  /// Applies the table to `image` with Core Image, in `colorSpace`: the encoding of the values
+  /// the preview grades (`videoColorSpace` for video frames, sRGB for photos).
+  func apply(to image: CIImage, colorSpace: CGColorSpace) -> CIImage {
+    // CIFilter isn't thread-safe: one per call.
+    let filter = CIFilter(name: "CIColorCubeWithColorSpace")!
+    filter.setValue(size, forKey: "inputCubeDimension")
+    filter.setValue(cubeData, forKey: "inputCubeData")
+    filter.setValue(colorSpace, forKey: "inputColorSpace")
+    filter.setValue(image, forKey: kCIInputImageKey)
+    return filter.outputImage!
+  }
+
+  /// The color space in which the table applies to video: CoreMedia's BT.709, the one of
+  /// decoded SDR video frames (and of `getVideoFrame`), so that the table grades the values the
+  /// preview shows. sRGB (right for still images) or ITU 709 give visibly different results.
+  /// Public as `CGColorSpace.coreMedia709` since iOS 18; created by name for older versions.
+  static let videoColorSpace = CGColorSpace(name: "kCGColorSpaceCoreMedia709" as CFString) ?? CGColorSpace(name: CGColorSpace.itur_709)!
 
   init(size: Int, data: [Float]) {
     precondition(data.count == size * size * size * 3, "LUT data must hold size³ × 3 values")
     self.size = size
     self.data = data
+    // RGBA floats, red varying fastest.
+    var rgba = [Float](repeating: 1, count: size * size * size * 4)
+    for i in 0..<(size * size * size) {
+      rgba[i * 4] = data[i * 3]
+      rgba[i * 4 + 1] = data[i * 3 + 1]
+      rgba[i * 4 + 2] = data[i * 3 + 2]
+    }
+    cubeData = rgba.withUnsafeBufferPointer { Data(buffer: $0) }
   }
 
   init?(map: [String: Any]?) {
@@ -92,16 +123,5 @@ struct Lut {
     else { return nil }
     let data: [Float] = typed.data.withUnsafeBytes { Array($0.bindMemory(to: Float.self)) }
     self.init(size: size, data: data)
-  }
-
-  /// `inputCubeData` of the Core Image color cube filters: RGBA floats, red varying fastest.
-  var cubeData: Data {
-    var rgba = [Float](repeating: 1, count: size * size * size * 4)
-    for i in 0..<(size * size * size) {
-      rgba[i * 4] = data[i * 3]
-      rgba[i * 4 + 1] = data[i * 3 + 1]
-      rgba[i * 4 + 2] = data[i * 3 + 2]
-    }
-    return rgba.withUnsafeBufferPointer { Data(buffer: $0) }
   }
 }

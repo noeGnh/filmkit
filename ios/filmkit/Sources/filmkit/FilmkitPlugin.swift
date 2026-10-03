@@ -3,7 +3,8 @@ import Flutter
 import UIKit
 
 /// `filmkit` method channel: `exportVideo` ({id, input, output, edit, lut}), `cancelExport`
-/// ({id}), `getVideoInfo` ({path}), `getVideoFrame` ({path, positionMs, maxDimension}).
+/// ({id}), `getVideoInfo` ({path}), `getVideoFrame` ({path, positionMs, maxDimension}),
+/// `exportImage` ({input, output, edit, lut, quality, keepLocation}).
 /// Progress goes back to Dart as `onProgress` ({id, progress}).
 public class FilmkitPlugin: NSObject, FlutterPlugin {
   private let channel: FlutterMethodChannel
@@ -39,6 +40,24 @@ public class FilmkitPlugin: NSObject, FlutterPlugin {
           result(try await VideoProbe.probe(asset).map)
         } catch {
           result(Self.flutterError(error))
+        }
+      }
+    case "exportImage":
+      let input = URL(fileURLWithPath: args["input"] as! String)
+      let output = URL(fileURLWithPath: args["output"] as! String)
+      let spec = EditSpec(map: args["edit"] as! [String: Any])
+      let lut = Lut(map: args["lut"] as? [String: Any])
+      let quality = (args["quality"] as! NSNumber).intValue
+      let keepLocation = (args["keepLocation"] as! NSNumber).boolValue
+      DispatchQueue.global(qos: .userInitiated).async {
+        let outcome = Result {
+          try ImageExporter.export(input: input, output: output, spec: spec, lut: lut, quality: quality, keepLocation: keepLocation)
+        }
+        DispatchQueue.main.async {
+          switch outcome {
+          case .success(let map): result(map)
+          case .failure(let error): result(Self.flutterError(error))
+          }
         }
       }
     case "getVideoFrame":

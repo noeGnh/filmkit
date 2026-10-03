@@ -72,6 +72,43 @@ internal class Lut(
             }
         }
 
+    /**
+     * Applies the table to [rgb] (0..1, in place): trilinear interpolation, as `CubeLut.apply`
+     * and the preview shader.
+     */
+    fun apply(rgb: FloatArray) {
+        val n = size - 1
+        val pr = rgb[0].coerceIn(0f, 1f) * n
+        val pg = rgb[1].coerceIn(0f, 1f) * n
+        val pb = rgb[2].coerceIn(0f, 1f) * n
+        val r0 = pr.toInt()
+        val g0 = pg.toInt()
+        val b0 = pb.toInt()
+        val r1 = min(r0 + 1, n)
+        val g1 = min(g0 + 1, n)
+        val b1 = min(b0 + 1, n)
+        val fr = pr - r0
+        val fg = pg - g0
+        val fb = pb - b0
+        for (c in 0..2) {
+            fun at(
+                r: Int,
+                g: Int,
+                b: Int
+            ) = data[((b * size + g) * size + r) * 3 + c]
+            fun lerp(
+                a: Float,
+                b: Float,
+                t: Float
+            ) = a + (b - a) * t
+            val c00 = lerp(at(r0, g0, b0), at(r1, g0, b0), fr)
+            val c10 = lerp(at(r0, g1, b0), at(r1, g1, b0), fr)
+            val c01 = lerp(at(r0, g0, b1), at(r1, g0, b1), fr)
+            val c11 = lerp(at(r0, g1, b1), at(r1, g1, b1), fr)
+            rgb[c] = lerp(lerp(c00, c10, fg), lerp(c01, c11, fg), fb)
+        }
+    }
+
     companion object {
         fun fromMap(map: Map<*, *>?): Lut? = map?.let { Lut((it["size"] as Number).toInt(), it["data"] as FloatArray) }
     }
@@ -97,6 +134,19 @@ internal object ExportGeometry {
         val height = (crop.bottom - crop.top) * displayHeight
         val scale = if (maxDimension == null) 1f else min(1f, maxDimension / max(width, height))
         return OutputSize(even(width * scale), even(height * scale))
+    }
+
+    /** Photo output size: as [outputSize], rounded to the nearest pixel (no even constraint). */
+    fun imageOutputSize(
+        displayWidth: Int,
+        displayHeight: Int,
+        crop: CropRect,
+        maxDimension: Int?
+    ): OutputSize {
+        val width = (crop.right - crop.left) * displayWidth
+        val height = (crop.bottom - crop.top) * displayHeight
+        val scale = if (maxDimension == null) 1f else min(1f, maxDimension / max(width, height))
+        return OutputSize(max(1, (width * scale).roundToInt()), max(1, (height * scale).roundToInt()))
     }
 
     /** Media3 `Crop` arguments (left, right, bottom, top) in NDC: -1..1, y up. */

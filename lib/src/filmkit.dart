@@ -5,7 +5,8 @@ import 'filmkit_platform.dart';
 import 'video_export.dart';
 import 'video_info.dart';
 
-/// Native video export: Media3 Transformer on Android, AVFoundation on iOS.
+/// Native photo and video export: Media3 Transformer and Android graphics on Android,
+/// AVFoundation and Core Image on iOS.
 abstract final class Filmkit {
   /// Exports [input] to [output] with the edits in [edit].
   ///
@@ -15,6 +16,21 @@ abstract final class Filmkit {
   /// invalid.
   static VideoExport exportVideo({required String input, required String output, EditSpec edit = const EditSpec()}) =>
       FilmkitPlatform.instance.exportVideo(input: input, output: output, edit: edit);
+
+  /// Exports the photo at [input] (JPEG, PNG, HEIC, WebP…) to a JPEG at [output] with the
+  /// crop, `maxDimension` and LUT of [edit] (trim is ignored).
+  ///
+  /// The EXIF orientation is applied to the pixels, and [edit]'s crop is in the displayed
+  /// orientation, as for videos. The output is sRGB, with the capture date, camera and
+  /// exposure metadata of the input; the location is removed unless [keepLocation] is true.
+  /// [quality] is the JPEG quality, 1 to 100. Fails with a `FilmkitException`.
+  static Future<ExportResult> exportImage({
+    required String input,
+    required String output,
+    EditSpec edit = const EditSpec(),
+    int quality = 90,
+    bool keepLocation = false,
+  }) => FilmkitPlatform.instance.exportImage(input: input, output: output, edit: edit, quality: quality, keepLocation: keepLocation);
 
   /// Reads the displayed size, duration, audio and HDR flags of the video at [path].
   static Future<VideoInfo> getVideoInfo(String path) => FilmkitPlatform.instance.getVideoInfo(path);
