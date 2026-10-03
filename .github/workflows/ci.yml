@@ -116,8 +116,9 @@ jobs:
           xcrun simctl bootstatus "$udid"
           flutter devices
           echo "udid=$udid" >> "$GITHUB_OUTPUT"
-      - name: RunnerTests (native unit tests)
-        working-directory: example/ios
-        run: xcodebuild test -workspace Runner.xcworkspace -scheme Runner -destination "id=${{ steps.simulator.outputs.udid }}" -only-testing:RunnerTests -quiet
+      # Before xcodebuild test, which shuts the simulator down when it ends.
       - run: flutter test integration_test -d ${{ steps.simulator.outputs.udid }}
         working-directory: example
+      - name: RunnerTests (native unit tests)
+        working-directory: example/ios
+        run: xcodebuild test -workspace Runner.xcworkspace -scheme Runner -destination "id=${{ steps.simulator.outputs.udid }}" -only-testing:RunnerTests -parallel-testing-enabled NO -quiet
