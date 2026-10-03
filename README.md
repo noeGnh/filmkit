@@ -2,7 +2,23 @@
 
 Photo and video editing for Flutter: crop, trim, LUT filters and adjustments, exported natively (Media3 Transformer on Android, AVFoundation on iOS), with an Instagram-style editor screen.
 
-> **Status**: 0.3, headless video and photo export (trim, crop, resize, LUT filters) and filter preview. The editor screen comes next.
+> **Status**: 0.4, Instagram-style editor, and headless video and photo export (trim, crop, resize, LUT filters).
+
+## Editor
+
+```dart
+final result = await FilmkitEditor.open(context, path: file.path);
+if (result != null) {
+  print(result.export!.path); // the exported MP4 or JPEG
+  print(result.edit);         // the EditSpec, to export again later
+}
+```
+
+- Tools: filters (tap again for the intensity), adjustments (brightness, contrast, saturation, warmth), crop (ratios, pan and pinch-zoom), trim for videos.
+- `EditorOptions`: the looks offered (`looks:`, default `Looks.builtIn`), the crop ratios (`aspects:`), `export: false` to only get the `EditSpec`, `outputPath`, `maxDimension` (1080 by default), `quality`, `keepLocation`, `minDuration` / `maxDuration` of the trim, and `texts:` to translate the labels (`EditorTexts`).
+- Your own filters: `Look('Name', await CubeLut.fromFile(path))` or `Look.generate('Name', (r, g, b) => ...)`.
+- `FilmkitEditorPage` is the screen itself, for apps that handle navigation themselves.
+- Adjustments only change colors, so they are baked into the look's LUT: the exporters only ever apply one table. The result's `edit.lut` is that combined table, written to the temporary directory.
 
 ## Video export
 

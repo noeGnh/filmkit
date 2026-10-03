@@ -4,7 +4,7 @@
 #
 Pod::Spec.new do |s|
   s.name             = 'filmkit'
-  s.version          = '0.3.0'
+  s.version          = '0.4.0'
   s.summary          = 'Native video export for Flutter.'
   s.description      = <<-DESC
 Photo and video editing for Flutter, exported natively with AVFoundation.

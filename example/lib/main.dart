@@ -111,6 +111,12 @@ class _ExportDemoPageState extends State<ExportDemoPage> {
     );
   }
 
+  Future<void> _openEditor() async {
+    final result = await FilmkitEditor.open(context, path: _media![_name]!);
+    if (!mounted || result == null) return;
+    setState(() => _status = 'Editor: ${result.export}\nlook: ${result.look?.name ?? 'none'}, ${result.aspect.label}, ${result.adjustments}');
+  }
+
   Future<void> _run() => _isPhoto ? _runPhoto() : _runVideo();
 
   Future<void> _runPhoto() async {
@@ -233,6 +239,13 @@ class _ExportDemoPageState extends State<ExportDemoPage> {
                     const SizedBox(width: 8),
                     OutlinedButton(onPressed: _export?.cancel, child: const Text('Cancel')),
                   ],
+                ),
+                const SizedBox(height: 8),
+                FilledButton.tonalIcon(
+                  key: const ValueKey('demo.editor'),
+                  onPressed: busy ? null : _openEditor,
+                  icon: const Icon(Icons.edit),
+                  label: const Text('Open the editor'),
                 ),
                 const SizedBox(height: 16),
                 if (busy) LinearProgressIndicator(value: _export == null ? null : _progress),
