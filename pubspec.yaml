@@ -1,6 +1,6 @@
 name: filmkit
 description: "Photo and video editing for Flutter: native export, LUT filters and an Instagram-style editor."
-version: 0.6.1
+version: 0.6.2
 homepage: https://github.com/noeGnh/filmkit
 repository: https://github.com/noeGnh/filmkit
 publish_to: 'none'
@@ -29,6 +29,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  video_player_platform_interface: ^6.9.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
