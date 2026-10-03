@@ -2,9 +2,18 @@
 
 Photo and video editing for Flutter: crop, trim, LUT filters and adjustments, exported natively (Media3 Transformer on Android, AVFoundation on iOS), with an Instagram-style editor screen.
 
-> **Status**: 0.4, Instagram-style editor, and headless video and photo export (trim, crop, resize, LUT filters).
+> **Status**: 0.6, Instagram-style editor with re-editing, and headless video and photo export (trim, crop, resize, LUT filters). Tested on Android (Pixel 8a, emulator) and the iOS simulator.
 
 ## Editor
+
+<p>
+  <img src="doc/filters.jpg" width="200" alt="Filters">
+  <img src="doc/crop.jpg" width="200" alt="Crop">
+  <img src="doc/adjust.jpg" width="200" alt="Adjustments">
+  <img src="doc/trim.jpg" width="200" alt="Video trim">
+</p>
+
+<sub>Photo: <a href="https://commons.wikimedia.org/wiki/File:Brighton_beach_at_sunset_2025-02-27.jpg">Brighton beach at sunset</a>, Wikimedia Commons, CC0.</sub>
 
 ```dart
 final result = await FilmkitEditor.open(context, path: file.path);
@@ -114,7 +123,7 @@ Filmkit.exportImage(input: photo, output: jpeg, edit: const EditSpec(lut: '/path
 - `LutFilter` needs Impeller (the default on Android and iOS); without it the child is shown unfiltered.
 
 - Input and output are file paths. With photo_manager / insta_assets_picker, use `await asset.originFile`.
-- The output is an MP4 (H.264 + AAC), SDR: HDR sources are tone mapped. Some Android devices can't tone map HDR; the export then fails with `hdrUnsupported`.
+- The output is an MP4 (H.264 + AAC), SDR: HDR sources are tone mapped by the platform (Media3 on Android, AVFoundation on iOS), so the result differs slightly between the two. Phone videos (HLG) convert well on both; Android renders them a little darker. With HDR10 (PQ) sources, Android adds a slight pink cast to bright grays, and iOS clips bright saturated colors, which can change their hue (a bright sky turns cyan). Some Android devices can't tone map HDR; the export then fails with `hdrUnsupported`.
 - Crop coordinates are in the displayed orientation (rotation tag applied), so a rect drawn over a preview can be passed as is.
 - `Filmkit.getVideoInfo(path)` returns the displayed size, duration, and audio / HDR flags.
 - `EditSpec` is serializable (`toJson` / `EditSpec.fromJson`).
