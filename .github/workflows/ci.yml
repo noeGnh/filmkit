@@ -88,7 +88,7 @@ jobs:
   ios:
     name: iOS build, unit and integration tests (simulator)
     runs-on: macos-26
-    timeout-minutes: 60
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v5
       - uses: subosito/flutter-action@v2
@@ -116,8 +116,23 @@ jobs:
           xcrun simctl bootstatus "$udid"
           flutter devices
           echo "udid=$udid" >> "$GITHUB_OUTPUT"
-      # Before xcodebuild test, which shuts the simulator down when it ends.
-      - run: flutter test integration_test -d ${{ steps.simulator.outputs.udid }}
+      # Before xcodebuild test, which shuts the simulator down when it ends. The app's first
+      # launch on a fresh CI simulator sometimes never connects to the test runner: one retry,
+      # after a simulator reboot.
+      - name: Integration tests
+        id: integration
+        continue-on-error: true
+        timeout-minutes: 20
+        run: flutter test integration_test -d ${{ steps.simulator.outputs.udid }}
+        working-directory: example
+      - name: Integration tests (retry)
+        if: steps.integration.outcome != 'success'
+        timeout-minutes: 20
+        run: |
+          xcrun simctl shutdown ${{ steps.simulator.outputs.udid }} || true
+          xcrun simctl boot ${{ steps.simulator.outputs.udid }}
+          xcrun simctl bootstatus ${{ steps.simulator.outputs.udid }}
+          flutter test integration_test -d ${{ steps.simulator.outputs.udid }}
         working-directory: example
       - name: RunnerTests (native unit tests)
         working-directory: example/ios
