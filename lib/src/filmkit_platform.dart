@@ -1,29 +1,30 @@
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
-import 'filmkit_method_channel.dart';
+import 'edit_spec.dart';
+import 'method_channel_filmkit.dart';
+import 'video_export.dart';
+import 'video_info.dart';
 
+/// The interface the native implementations provide.
 abstract class FilmkitPlatform extends PlatformInterface {
-  /// Constructs a FilmkitPlatform.
   FilmkitPlatform() : super(token: _token);
 
   static final Object _token = Object();
 
   static FilmkitPlatform _instance = MethodChannelFilmkit();
 
-  /// The default instance of [FilmkitPlatform] to use.
-  ///
-  /// Defaults to [MethodChannelFilmkit].
   static FilmkitPlatform get instance => _instance;
 
-  /// Platform-specific implementations should set this with their own
-  /// platform-specific class that extends [FilmkitPlatform] when
-  /// they register themselves.
   static set instance(FilmkitPlatform instance) {
     PlatformInterface.verifyToken(instance, _token);
     _instance = instance;
   }
 
-  Future<String?> getPlatformVersion() {
-    throw UnimplementedError('platformVersion() has not been implemented.');
+  VideoExport exportVideo({required String input, required String output, required EditSpec edit}) {
+    throw UnimplementedError('exportVideo() has not been implemented.');
+  }
+
+  Future<VideoInfo> getVideoInfo(String path) {
+    throw UnimplementedError('getVideoInfo() has not been implemented.');
   }
 }
