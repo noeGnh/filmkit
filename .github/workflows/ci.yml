@@ -121,4 +121,7 @@ jobs:
         working-directory: example
       - name: RunnerTests (native unit tests)
         working-directory: example/ios
-        run: xcodebuild test -workspace Runner.xcworkspace -scheme Runner -destination "id=${{ steps.simulator.outputs.udid }}" -only-testing:RunnerTests -parallel-testing-enabled NO -quiet
+        # flutter test leaves the Xcode config pointing at its deleted test entry point.
+        run: |
+          flutter build ios --config-only --simulator --debug
+          xcodebuild test -workspace Runner.xcworkspace -scheme Runner -destination "id=${{ steps.simulator.outputs.udid }}" -only-testing:RunnerTests -parallel-testing-enabled NO -quiet
