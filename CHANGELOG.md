@@ -1,3 +1,8 @@
+## 0.6.0
+
+* `CropState.fromRect`: a crop state from a normalized rect, e.g. the area chosen in a picker.
+* Example: pick with insta_assets_picker, then edit with filmkit (the picker's ratio and area become the editor's initial crop). See the README.
+
 ## 0.5.0
 
 * Re-editing: `EditorResult.state` (`EditorState`: look, intensity, adjustments, crop ratio / zoom / position, trim), serializable to JSON, and `FilmkitEditor.open(initialState:)` to reopen the editor where the user left off.
