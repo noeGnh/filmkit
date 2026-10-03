@@ -40,6 +40,8 @@ class _ExportDemoPageState extends State<ExportDemoPage> {
   bool _look = false;
   double _intensity = 1;
 
+  /// The last editor choices for each sample.
+  final _editorStates = <String, EditorState>{};
   bool _exporting = false;
   VideoExport? _export;
   double _progress = 0;
@@ -112,8 +114,11 @@ class _ExportDemoPageState extends State<ExportDemoPage> {
   }
 
   Future<void> _openEditor() async {
-    final result = await FilmkitEditor.open(context, path: _media![_name]!);
+    final name = _name;
+    final result = await FilmkitEditor.open(context, path: _media![name]!, initialState: _editorStates[name]);
     if (!mounted || result == null) return;
+    // Reopening the same sample restores these choices.
+    _editorStates[name] = result.state;
     setState(() => _status = 'Editor: ${result.export}\nlook: ${result.look?.name ?? 'none'}, ${result.aspect.label}, ${result.adjustments}');
   }
 

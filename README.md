@@ -17,6 +17,7 @@ if (result != null) {
 - Tools: filters (tap again for the intensity), adjustments (brightness, contrast, saturation, warmth), crop (ratios, pan and pinch-zoom), trim for videos.
 - `EditorOptions`: the looks offered (`looks:`, default `Looks.builtIn`), the crop ratios (`aspects:`), `export: false` to only get the `EditSpec`, `outputPath`, `maxDimension` (1080 by default), `quality`, `keepLocation`, `minDuration` / `maxDuration` of the trim, and `texts:` to translate the labels (`EditorTexts`).
 - Your own filters: `Look('Name', await CubeLut.fromFile(path))` or `Look.generate('Name', (r, g, b) => ...)`.
+- Reopen the editor where the user left off: save `result.state.toJson()` (an `EditorState`), and pass `EditorState.fromJson(...)` as `initialState:` to `FilmkitEditor.open` on the same file.
 - `FilmkitEditorPage` is the screen itself, for apps that handle navigation themselves.
 - Adjustments only change colors, so they are baked into the look's LUT: the exporters only ever apply one table. The result's `edit.lut` is that combined table, written to the temporary directory.
 

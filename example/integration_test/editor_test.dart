@@ -43,7 +43,9 @@ void main() {
   }
 
   /// Opens the editor on [path] and returns a getter for its result.
-  Future<EditorResult? Function()> open(WidgetTester tester, String path, {EditorOptions options = const EditorOptions()}) async {
+  Future<EditorResult? Function()> open(WidgetTester tester, String path, {EditorOptions options = const EditorOptions(), EditorState? initialState}) async {
+    // A previous editor may still be animating out.
+    await pumpUntil(tester, () => find.byKey(const ValueKey('filmkit.done')).evaluate().isEmpty, reason: 'previous editor closed');
     EditorResult? result;
     await tester.pumpWidget(
       MaterialApp(
@@ -51,7 +53,7 @@ void main() {
           builder: (context) => Center(
             child: TextButton(
               key: const ValueKey('open'),
-              onPressed: () async => result = await FilmkitEditor.open(context, path: path, options: options),
+              onPressed: () async => result = await FilmkitEditor.open(context, path: path, options: options, initialState: initialState),
               child: const Text('open'),
             ),
           ),
@@ -145,5 +147,45 @@ void main() {
     await tap(tester, 'filmkit.close');
     await pumpUntil(tester, () => find.byKey(const ValueKey('open')).evaluate().isNotEmpty, reason: 'pop');
     expect(result(), isNull);
+  });
+
+  testWidgets('reopens a photo with an earlier state', (tester) async {
+    const noExport = EditorOptions(export: false);
+    var result = await open(tester, media['gradient.jpg']!, options: noExport);
+    await tap(tester, 'filmkit.tool.crop');
+    await tap(tester, 'filmkit.aspect.4:5');
+    await tester.drag(find.byKey(const ValueKey('filmkit.preview')), const Offset(80, 0));
+    await tester.pump();
+    await tap(tester, 'filmkit.tool.filters');
+    await tapLook(tester, 'Film');
+    await tap(tester, 'filmkit.done');
+    await pumpUntil(tester, () => result() != null, reason: 'first session');
+    final first = result()!;
+    expect(first.export, isNull);
+    expect(first.state.look, 'Film');
+    expect(first.edit.crop!.left, lessThan(0.5 - first.edit.crop!.width / 2), reason: 'panned left of center');
+
+    result = await open(tester, media['gradient.jpg']!, options: noExport, initialState: EditorState.fromJson(first.state.toJson()));
+    await tap(tester, 'filmkit.done');
+    await pumpUntil(tester, () => result() != null, reason: 'second session');
+    final second = result()!;
+    expect(second.state, first.state);
+    expect(second.edit.crop, first.edit.crop);
+    expect(second.look?.name, 'Film');
+  });
+
+  testWidgets('reopens a video with its trim and look', (tester) async {
+    final result = await open(
+      tester,
+      media['landscape.mp4']!,
+      options: const EditorOptions(export: false),
+      initialState: const EditorState(look: 'Mono', trimStart: Duration(seconds: 1), trimEnd: Duration(seconds: 3)),
+    );
+    await tap(tester, 'filmkit.done');
+    await pumpUntil(tester, () => result() != null, reason: 'done');
+    final r = result()!;
+    expect((r.edit.trimStart, r.edit.trimEnd), (const Duration(seconds: 1), const Duration(seconds: 3)));
+    expect(r.look?.name, 'Mono');
+    expect(r.edit.lut, isNotNull);
   });
 }

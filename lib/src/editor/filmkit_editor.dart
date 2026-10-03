@@ -17,6 +17,7 @@ import 'adjustments.dart';
 import 'crop_state.dart';
 import 'crop_view.dart';
 import 'editor_options.dart';
+import 'editor_state.dart';
 import 'looks.dart';
 import 'trim_bar.dart';
 
@@ -24,13 +25,21 @@ import 'trim_bar.dart';
 abstract final class FilmkitEditor {
   /// Opens the editor on the photo or video at [path] and returns the result when the user
   /// taps Done, `null` if they close it. [isVideo] defaults to a guess from the extension.
-  static Future<EditorResult?> open(BuildContext context, {required String path, bool? isVideo, EditorOptions options = const EditorOptions()}) =>
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          fullscreenDialog: true,
-          builder: (_) => FilmkitEditorPage(path: path, isVideo: isVideo, options: options),
-        ),
-      );
+  ///
+  /// [initialState] reopens the editor with earlier choices (`EditorResult.state`) on the same
+  /// file.
+  static Future<EditorResult?> open(
+    BuildContext context, {
+    required String path,
+    bool? isVideo,
+    EditorOptions options = const EditorOptions(),
+    EditorState? initialState,
+  }) => Navigator.of(context).push(
+    MaterialPageRoute(
+      fullscreenDialog: true,
+      builder: (_) => FilmkitEditorPage(path: path, isVideo: isVideo, options: options, initialState: initialState),
+    ),
+  );
 }
 
 const _videoExtensions = {'mp4', 'mov', 'm4v', '3gp', 'webm', 'mkv'};
@@ -41,11 +50,12 @@ enum _Adjustment { brightness, contrast, saturation, warmth }
 
 /// The editor screen, for apps that manage their own navigation: it pops an [EditorResult].
 class FilmkitEditorPage extends StatefulWidget {
-  const FilmkitEditorPage({super.key, required this.path, this.isVideo, this.options = const EditorOptions()});
+  const FilmkitEditorPage({super.key, required this.path, this.isVideo, this.options = const EditorOptions(), this.initialState});
 
   final String path;
   final bool? isVideo;
   final EditorOptions options;
+  final EditorState? initialState;
 
   @override
   State<FilmkitEditorPage> createState() => _FilmkitEditorPageState();
@@ -101,13 +111,44 @@ class _FilmkitEditorPageState extends State<FilmkitEditorPage> {
       } else {
         await _loadPhoto();
       }
-      final first = widget.options.aspects.isEmpty ? CropAspect.original : widget.options.aspects.first;
-      _crop = _crop.withAspect(first);
+      _restore(widget.initialState ?? const EditorState());
     } catch (e) {
       _error = e;
     }
     if (mounted) setState(() => _loading = false);
   }
+
+  /// Applies [state] once the media is loaded (its aspect and duration are known).
+  void _restore(EditorState state) {
+    final aspect = state.aspect ?? (widget.options.aspects.isEmpty ? CropAspect.original : widget.options.aspects.first);
+    _crop = CropState(mediaAspect: _crop.mediaAspect, aspect: aspect, zoom: state.cropZoom, center: state.cropCenter).panned(Offset.zero);
+    _look = _looks.where((look) => look.name == state.look).firstOrNull;
+    _intensity = state.lookIntensity.clamp(0, 1);
+    _adjustments = state.adjustments;
+    _updateLut();
+    if (_isVideo) {
+      final (start, end) = clampTrim(
+        state.trimStart,
+        state.trimEnd ?? _duration,
+        _duration,
+        minLength: widget.options.minDuration,
+        maxLength: widget.options.maxDuration,
+      );
+      _trimStart = start;
+      _trimEnd = end;
+    }
+  }
+
+  EditorState get _state => EditorState(
+    look: _look?.name,
+    lookIntensity: _intensity,
+    adjustments: _adjustments,
+    aspect: _crop.aspect,
+    cropZoom: _crop.zoom,
+    cropCenter: _crop.center,
+    trimStart: _isVideo ? _trimStart : Duration.zero,
+    trimEnd: _isVideo && _trimEnd < _duration ? _trimEnd : null,
+  );
 
   Future<void> _loadPhoto() async {
     // A downscaled, oriented sRGB JPEG: decodes everywhere (HEIC included) and fast.
@@ -121,16 +162,9 @@ class _FilmkitEditorPageState extends State<FilmkitEditorPage> {
   Future<void> _loadVideo() async {
     final info = await Filmkit.getVideoInfo(widget.path);
     _duration = info.duration;
+    // Until _restore applies the initial trim, so that the loop doesn't fire on a zero end.
+    _trimEnd = info.duration;
     _crop = CropState(mediaAspect: info.width / info.height);
-    final (start, end) = clampTrim(
-      Duration.zero,
-      info.duration,
-      info.duration,
-      minLength: widget.options.minDuration,
-      maxLength: widget.options.maxDuration,
-    );
-    _trimStart = start;
-    _trimEnd = end;
     final controller = VideoPlayerController.file(File(widget.path));
     await controller.initialize();
     _video = controller..addListener(_onVideoTick);
@@ -243,7 +277,7 @@ class _FilmkitEditorPageState extends State<FilmkitEditorPage> {
     }
     if (!mounted) return;
     Navigator.of(context).pop(
-      EditorResult(edit: edit, export: exported, look: _look, lookIntensity: _intensity, adjustments: _adjustments, aspect: _crop.aspect),
+      EditorResult(edit: edit, export: exported, look: _look, state: _state),
     );
   }
 
@@ -287,6 +321,7 @@ class _FilmkitEditorPageState extends State<FilmkitEditorPage> {
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: CropView(
+                  key: const ValueKey('filmkit.preview'),
                   state: _crop,
                   interactive: _tool == _Tool.crop,
                   onChanged: (state) => setState(() => _crop = state),
