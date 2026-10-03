@@ -44,6 +44,18 @@ void main() {
       expect(zoomed.zoomed(0.01, const Offset(0.5, 0.5)).rect, const Rect.fromLTRB(0, 0, 1, 1));
     });
 
+    test('fromRect restores a crop rect', () {
+      const media = 16 / 9;
+      final state = const CropState(mediaAspect: media).withAspect(CropAspect.square).zoomed(2, const Offset(0.3, 0.4));
+      final restored = CropState.fromRect(mediaAspect: media, aspect: CropAspect.square, rect: state.rect);
+      expect(restored.zoom, closeTo(state.zoom, 1e-9));
+      expect(restored.center.dx, closeTo(state.center.dx, 1e-9));
+      expect(restored.center.dy, closeTo(state.center.dy, 1e-9));
+      // A rect partly outside the media is clamped back in.
+      final clamped = CropState.fromRect(mediaAspect: 1, aspect: CropAspect.square, rect: const Rect.fromLTWH(0.8, 0, 0.5, 0.5));
+      expect(clamped.rect.right, closeTo(1, 1e-9));
+    });
+
     test('frameSizeIn fits the frame aspect in the area', () {
       final state = const CropState(mediaAspect: 16 / 9).withAspect(CropAspect.portrait);
       expect(state.frameSizeIn(const Size(400, 400)), const Size(320, 400));

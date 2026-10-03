@@ -21,6 +21,41 @@ if (result != null) {
 - `FilmkitEditorPage` is the screen itself, for apps that handle navigation themselves.
 - Adjustments only change colors, so they are baked into the look's LUT: the exporters only ever apply one table. The result's `edit.lut` is that combined table, written to the temporary directory.
 
+## With insta_assets_picker
+
+filmkit doesn't include a picker: [insta_assets_picker](https://pub.dev/packages/insta_assets_picker) gives the Instagram-style gallery, filmkit the editing. Skip the picker's own crop and hand its ratio and area to the editor (full version in [example/lib/gallery.dart](example/lib/gallery.dart)):
+
+```dart
+final details = Completer<InstaAssetsExportDetails>();
+final selected = await InstaAssetPicker.pickAssets(
+  context,
+  maxAssets: 1,
+  pickerConfig: const InstaAssetPickerConfig(closeOnComplete: true, skipCropOnComplete: true),
+  onCompleted: (stream) => stream.first.then(details.complete),
+);
+final asset = selected!.first;
+final file = (await asset.originFile)!;
+final picked = await details.future;
+final aspect = CropAspect('picker', picked.aspectRatio);
+final crop = CropState.fromRect(
+  mediaAspect: asset.orientatedWidth / asset.orientatedHeight,
+  aspect: aspect,
+  rect: picked.data.first.selectedData.area ?? const Rect.fromLTRB(0, 0, 1, 1),
+);
+final result = await FilmkitEditor.open(
+  context,
+  path: file.path,
+  isVideo: asset.type == AssetType.video,
+  initialState: EditorState(aspect: aspect, cropZoom: crop.zoom, cropCenter: crop.center),
+);
+```
+
+Setup, as of insta_assets_picker 3.4.0:
+
+- Gallery permissions, see [wechat_assets_picker's guide](https://pub.dev/packages/wechat_assets_picker#preparing-for-use-) (`READ_MEDIA_IMAGES` / `READ_MEDIA_VIDEO` on Android, `NSPhotoLibraryUsageDescription` on iOS).
+- Android: its `insta_assets_crop` dependency compiles against API 31, which current AndroidX libraries refuse. Raise it in `android/build.gradle.kts` (see the [example](example/android/build.gradle.kts)).
+- iOS: `insta_assets_crop` doesn't support Swift Package Manager yet, so the app builds with CocoaPods for it (Flutter does it automatically).
+
 ## Video export
 
 ```dart

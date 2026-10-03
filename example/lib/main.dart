@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 import 'package:filmkit/filmkit.dart';
 import 'package:flutter/material.dart';
 
+import 'gallery.dart';
 import 'sample_looks.dart';
 import 'sample_videos.dart';
 
@@ -111,6 +112,12 @@ class _ExportDemoPageState extends State<ExportDemoPage> {
       lut: _look ? _lookPath : null,
       lutIntensity: _intensity,
     );
+  }
+
+  Future<void> _pickFromGallery() async {
+    final result = await pickAndEdit(context);
+    if (!mounted || result == null) return;
+    setState(() => _status = 'Gallery: ${result.export}\n${result.state}');
   }
 
   Future<void> _openEditor() async {
@@ -244,6 +251,13 @@ class _ExportDemoPageState extends State<ExportDemoPage> {
                     const SizedBox(width: 8),
                     OutlinedButton(onPressed: _export?.cancel, child: const Text('Cancel')),
                   ],
+                ),
+                const SizedBox(height: 8),
+                FilledButton.tonalIcon(
+                  key: const ValueKey('demo.gallery'),
+                  onPressed: busy ? null : _pickFromGallery,
+                  icon: const Icon(Icons.photo_library),
+                  label: const Text('Pick from the gallery'),
                 ),
                 const SizedBox(height: 8),
                 FilledButton.tonalIcon(

@@ -36,6 +36,15 @@ class CropAspect {
 class CropState {
   const CropState({required this.mediaAspect, this.aspect = CropAspect.original, this.zoom = 1, this.center = const Offset(0.5, 0.5)});
 
+  /// The state showing [rect] (normalized, e.g. a crop chosen in a picker) through a frame of
+  /// [aspect]: [rect] is expected to have that aspect; it's zoomed to its width and clamped
+  /// into the media.
+  factory CropState.fromRect({required double mediaAspect, required CropAspect aspect, required Rect rect}) {
+    final base = CropState(mediaAspect: mediaAspect, aspect: aspect);
+    final zoom = rect.width > 0 ? (base.cropSize.width / rect.width).clamp(1.0, maxZoom) : 1.0;
+    return CropState(mediaAspect: mediaAspect, aspect: aspect, zoom: zoom, center: rect.center).panned(Offset.zero);
+  }
+
   /// Displayed width / height of the media.
   final double mediaAspect;
   final CropAspect aspect;
