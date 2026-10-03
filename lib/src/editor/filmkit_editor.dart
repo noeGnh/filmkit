@@ -168,7 +168,12 @@ class _FilmkitEditorPageState extends State<FilmkitEditorPage> {
     final controller = VideoPlayerController.file(File(widget.path));
     await controller.initialize();
     _video = controller..addListener(_onVideoTick);
-    _thumbnail = await Filmkit.getVideoFrame(widget.path, position: info.duration ~/ 2, maxDimension: 240);
+    // Thumbnails only decorate the filter strip and the trim bar: the video opens without them.
+    _thumbnail = await Filmkit.getVideoFrame(
+      widget.path,
+      position: info.duration ~/ 2,
+      maxDimension: 240,
+    ).then<ui.Image?>((i) => i).catchError((_) => null, test: (e) => e is FilmkitException);
     unawaited(controller.play());
     unawaited(_loadTrimThumbnails());
   }
@@ -178,9 +183,19 @@ class _FilmkitEditorPageState extends State<FilmkitEditorPage> {
     final thumbnails = <ui.Image>[];
     for (var i = 0; i < count; i++) {
       final position = _duration * ((i + 0.5) / count);
-      thumbnails.add(await Filmkit.getVideoFrame(widget.path, position: position, maxDimension: 120));
-      if (!mounted) return;
+      try {
+        thumbnails.add(await Filmkit.getVideoFrame(widget.path, position: position, maxDimension: 120));
+      } on FilmkitException {
+        break;
+      }
+      if (!mounted) {
+        for (final image in thumbnails) {
+          image.dispose();
+        }
+        return;
+      }
     }
+    if (thumbnails.isEmpty) return;
     setState(() => _trimThumbnails = thumbnails);
   }
 
