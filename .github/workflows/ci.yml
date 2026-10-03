@@ -100,14 +100,21 @@ jobs:
       - name: Boot a simulator
         id: simulator
         run: |
-          udid=$(xcrun simctl list devices available --json | python3 -c "
-          import json, sys
+          # An iPhone of the runtime matching the active Xcode's SDK: Flutter only lists those.
+          sdk=$(xcrun --sdk iphonesimulator --show-sdk-version)
+          echo "Xcode: $(xcodebuild -version | head -1), simulator SDK $sdk"
+          udid=$(xcrun simctl list devices available --json | SDK="$sdk" python3 -c "
+          import json, os, sys
+          runtime = 'iOS-' + os.environ['SDK'].replace('.', '-')
           devices = json.load(sys.stdin)['devices']
-          iphones = [d for runtime, ds in devices.items() if 'iOS' in runtime for d in ds if d['name'].startswith('iPhone')]
-          print(iphones[-1]['udid'])
+          matches = [d for r, ds in devices.items() if r.endswith(runtime) for d in ds if d['name'].startswith('iPhone')]
+          if not matches:
+              sys.exit('No iPhone simulator for ' + runtime + ' in ' + ', '.join(devices))
+          print(matches[-1]['udid'])
           ")
           xcrun simctl boot "$udid"
           xcrun simctl bootstatus "$udid"
+          flutter devices
           echo "udid=$udid" >> "$GITHUB_OUTPUT"
       - name: RunnerTests (native unit tests)
         working-directory: example/ios
