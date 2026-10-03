@@ -1,3 +1,9 @@
+## 0.4.0
+
+* Instagram-style editor: `FilmkitEditor.open(context, path:)` with filters (10 built-in looks generated in Dart, or your own `Look`s / `.cube` files) and their intensity, adjustments (brightness, contrast, saturation, warmth, baked into the same LUT), crop with ratios, pan and zoom, and video trim with a thumbnail strip. Returns an `EditorResult` (the `EditSpec`, and the exported file unless `EditorOptions.export` is false). Labels configurable with `EditorTexts`.
+* `LutFilter` keeps the previous table applied while a new one loads, and keeps its child's state when the filter is toggled.
+* Depends on `video_player` for the video preview.
+
 ## 0.3.0
 
 * Photo export: `Filmkit.exportImage` (JPEG, HEIC, PNG, WebP… in, JPEG out) with the same `EditSpec` as videos (crop in displayed coordinates, `maxDimension`, LUT). The EXIF orientation is applied to the pixels; capture date, camera and exposure metadata are kept, the location only with `keepLocation`. Android decodes only the cropped region at the needed resolution.

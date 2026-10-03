@@ -101,11 +101,12 @@ void main() {
         ),
       );
       // Shader program and LUT texture load asynchronously.
-      for (var i = 0; i < 100 && find.byType(ImageFiltered).evaluate().isEmpty; i++) {
+      bool applied() => tester.widget<ImageFiltered>(find.byType(ImageFiltered)).enabled;
+      for (var i = 0; i < 100 && !applied(); i++) {
         await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
         await tester.pump();
       }
-      expect(find.byType(ImageFiltered), findsOneWidget, reason: 'LutFilter never applied the shader');
+      expect(applied(), isTrue, reason: 'LutFilter never applied the shader');
       final boundary = tester.renderObject<RenderRepaintBoundary>(find.byKey(key));
       final rendered = (await tester.runAsync(() => boundary.toImage(pixelRatio: dpr)))!;
       return (await tester.runAsync(() => Rgba.fromImage(rendered)))!;

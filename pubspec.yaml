@@ -1,6 +1,6 @@
 name: filmkit
 description: "Photo and video editing for Flutter: native export, LUT filters and an Instagram-style editor."
-version: 0.3.0
+version: 0.4.0
 homepage: https://github.com/noeGnh/filmkit
 publish_to: 'none'
 
@@ -12,6 +12,7 @@ dependencies:
   flutter:
     sdk: flutter
   plugin_platform_interface: ^2.0.2
+  video_player: ^2.14.1
 
 dev_dependencies:
   flutter_test:
