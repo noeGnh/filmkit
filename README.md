@@ -120,7 +120,10 @@ Requirements: Android API 24+, iOS 15+.
 ## Development
 
 - Dart tests: `flutter test` (the editor screen runs against a fake `FilmkitPlatform` and video player, see `test/fakes.dart`).
-- CI (`.github/workflows/ci.yml`): format, analysis and Dart tests; Android build and Kotlin unit tests; the integration tests on an Android emulator and an iOS simulator, with the `RunnerTests`.
-- Native tests: `./gradlew :filmkit:testDebugUnitTest` in `example/android`; `RunnerTests` in `example/ios` (`xcodebuild test -workspace Runner.xcworkspace -scheme Runner -destination 'platform=iOS Simulator,name=<device>' -only-testing:RunnerTests`).
+- CI (`.github/workflows/ci.yml`): format, analysis and Dart tests; Android build and Kotlin unit tests; the integration tests on an Android emulator and, through XCTest with the `RunnerTests`, on an iOS simulator.
+- Native tests: `./gradlew :filmkit:testDebugUnitTest` in `example/android`; `RunnerTests` in `example/ios` (`xcodebuild test -workspace Runner.xcworkspace -scheme Runner -destination 'platform=iOS Simulator,name=<device>' -only-testing:RunnerTests/RunnerTests`: the `RunnerTests` class only).
+- On iOS simulators, `flutter test integration_test` often never sees the app start (flutter/flutter#181771). The RunnerTests target also runs the integration tests through XCTest (`RunnerTests/IntegrationTests.m`), which is what the CI does:
+  1. In `example`, `flutter build ios --config-only --simulator --debug integration_test/all_test.dart`.
+  2. `xcodebuild test` as above, with `-only-testing:RunnerTests`. The integration tests then show up as `IntegrationTests` cases.
 - Export tests on a device: `flutter test integration_test -d <device>` in `example`, with the sample videos of `example/assets/videos` (colored quadrants and a gray band that encodes time, a color gradient) and photos of `example/assets/photos` (a gradient, the quadrant pattern in the 8 EXIF orientations with metadata), see `example/lib/sample_videos.dart`). They compare the export and the preview with the CPU reference pixel by pixel.
 - On the Android emulator, add `--dart-define=EMULATOR=true`: its graphics layer converts BT.709 video frames with the BT.601 matrix, which shifts the colors of every Media3 export there (test `export keeps the source colors`).
