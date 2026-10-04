@@ -3,7 +3,13 @@ description: "Photo and video editing for Flutter: native export, LUT filters an
 version: 0.6.2
 homepage: https://github.com/noeGnh/filmkit
 repository: https://github.com/noeGnh/filmkit
-publish_to: 'none'
+issue_tracker: https://github.com/noeGnh/filmkit/issues
+topics:
+  - video
+  - image
+  - editor
+  - filter
+  - crop
 
 screenshots:
   - description: The editor's filters on a photo.
