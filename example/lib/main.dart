@@ -3,9 +3,9 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:filmkit/filmkit.dart';
+import 'package:filmkit_picker/filmkit_picker.dart';
 import 'package:flutter/material.dart';
 
-import 'gallery.dart';
 import 'sample_looks.dart';
 import 'sample_videos.dart';
 
@@ -114,9 +114,12 @@ class _ExportDemoPageState extends State<ExportDemoPage> {
     );
   }
 
+  /// Picks a photo or video with filmkit_picker, then edits it: the crop chosen in the picker
+  /// becomes the editor's initial crop.
   Future<void> _pickFromGallery() async {
-    final result = await pickAndEdit(context);
-    if (!mounted || result == null) return;
+    final results = await FilmkitPicker.pickAndEdit(context);
+    if (!mounted || results == null) return;
+    final result = results.single;
     setState(() => _status = 'Gallery: ${result.export}\n${result.state}');
   }
 
