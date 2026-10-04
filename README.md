@@ -31,40 +31,19 @@ if (result != null) {
 - `FilmkitEditorPage` is the screen itself, for apps that handle navigation themselves. `CropView` is the crop tool's view (a `CropState` over any child), e.g. for a crop preview in a picker.
 - Adjustments only change colors, so they are baked into the look's LUT: the exporters only ever apply one table. The result's `edit.lut` is that combined table, written to the temporary directory.
 
-## With insta_assets_picker
+## With a picker
 
-filmkit doesn't include a picker: [insta_assets_picker](https://pub.dev/packages/insta_assets_picker) gives the Instagram-style gallery, filmkit the editing. Skip the picker's own crop and hand its ratio and area to the editor (full version in [example/lib/gallery.dart](example/lib/gallery.dart)):
+filmkit doesn't include a picker. [filmkit_picker](https://pub.dev/packages/filmkit_picker) is its companion: an Instagram-style gallery with a crop preview, single or multiple selection. It opens the editor on each picked media, starting from the crop chosen in the picker (see the [example](example/lib/main.dart)):
 
 ```dart
-final details = Completer<InstaAssetsExportDetails>();
-final selected = await InstaAssetPicker.pickAssets(
+final results = await FilmkitPicker.pickAndEdit(
   context,
-  maxAssets: 1,
-  pickerConfig: const InstaAssetPickerConfig(closeOnComplete: true, skipCropOnComplete: true),
-  onCompleted: (stream) => stream.first.then(details.complete),
-);
-final asset = selected!.first;
-final file = (await asset.originFile)!;
-final picked = await details.future;
-final aspect = CropAspect('picker', picked.aspectRatio);
-final crop = CropState.fromRect(
-  mediaAspect: asset.orientatedWidth / asset.orientatedHeight,
-  aspect: aspect,
-  rect: picked.data.first.selectedData.area ?? const Rect.fromLTRB(0, 0, 1, 1),
-);
-final result = await FilmkitEditor.open(
-  context,
-  path: file.path,
-  isVideo: asset.type == AssetType.video,
-  initialState: EditorState(aspect: aspect, cropZoom: crop.zoom, cropCenter: crop.center),
+  options: const PickerOptions(maxCount: 10),
+  editorOptions: const EditorOptions(maxDimension: 1080),
 );
 ```
 
-Setup, as of insta_assets_picker 3.4.0:
-
-- Gallery permissions, see [wechat_assets_picker's guide](https://pub.dev/packages/wechat_assets_picker#preparing-for-use-) (`READ_MEDIA_IMAGES` / `READ_MEDIA_VIDEO` on Android, `NSPhotoLibraryUsageDescription` on iOS).
-- Android: its `insta_assets_crop` dependency compiles against API 31, which current AndroidX libraries refuse. Raise it in `android/build.gradle.kts` (see the [example](example/android/build.gradle.kts)).
-- iOS: `insta_assets_crop` doesn't support Swift Package Manager yet, so the app builds with CocoaPods for it (Flutter does it automatically).
+Any other picker works too: pass the file path to `FilmkitEditor.open`. If that picker has a crop, `CropState.fromRect` turns its ratio and normalized area into an `initialState` for the editor.
 
 ## Video export
 
@@ -123,7 +102,7 @@ Filmkit.exportImage(input: photo, output: jpeg, edit: const EditSpec(lut: '/path
 - `Filmkit.getVideoFrame(path, position: …, maxDimension: …)` returns a frame as a `ui.Image` (e.g. for filter thumbnails).
 - `LutFilter` needs Impeller (the default on Android and iOS); without it the child is shown unfiltered.
 
-- Input and output are file paths. With photo_manager / insta_assets_picker, use `await asset.originFile`.
+- Input and output are file paths. With a photo_manager `AssetEntity`, use `await asset.file`.
 - The output is an MP4 (H.264 + AAC), SDR: HDR sources are tone mapped by the platform (Media3 on Android, AVFoundation on iOS), so the result differs slightly between the two. Phone videos (HLG) convert well on both; Android renders them a little darker. With HDR10 (PQ) sources, Android adds a slight pink cast to bright grays, and iOS clips bright saturated colors, which can change their hue (a bright sky turns cyan). Some Android devices can't tone map HDR; the export then fails with `hdrUnsupported`.
 - Crop coordinates are in the displayed orientation (rotation tag applied), so a rect drawn over a preview can be passed as is.
 - `Filmkit.getVideoInfo(path)` returns the displayed size, duration, and audio / HDR flags.
@@ -136,7 +115,7 @@ Requirements: Android API 24+, iOS 15+.
 - The editing UI is Flutter; everything that produces a file is native.
 - Filters are 3D LUTs, shared by the live preview (Flutter shader) and the native export, so that the preview and the exported file look the same.
 - Edits are described by a serializable `EditSpec`, exportable with or without the editor screen.
-- Picker-agnostic input: a file path (e.g. from an insta_assets_picker `AssetEntity`).
+- Picker-agnostic input: a file path, from filmkit_picker or any other picker.
 
 ## Development
 

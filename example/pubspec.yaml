@@ -28,7 +28,12 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
-  insta_assets_picker: ^3.4.0
+  filmkit_picker: ^0.1.0
+
+# filmkit_picker depends on filmkit from pub.dev: use this one instead.
+dependency_overrides:
+  filmkit:
+    path: ../
 
 dev_dependencies:
   integration_test:

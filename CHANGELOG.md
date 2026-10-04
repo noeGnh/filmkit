@@ -1,3 +1,7 @@
+## 0.7.1
+
+* Example: picks with [filmkit_picker](https://pub.dev/packages/filmkit_picker) instead of insta_assets_picker. The app no longer needs the workarounds for insta_assets_crop (a raised `compileSdk`, CocoaPods on iOS). The README points to filmkit_picker.
+
 ## 0.7.0
 
 * `CropView` is public: the crop tool's pan and pinch-zoom over any child, for a crop preview outside the editor (a picker). `showGrid:` hides the grid while it stays interactive.
