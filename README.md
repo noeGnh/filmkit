@@ -2,7 +2,7 @@
 
 Photo and video editing for Flutter: crop, trim, LUT filters and adjustments, exported natively (Media3 Transformer on Android, AVFoundation on iOS), with an Instagram-style editor screen.
 
-> **Status**: 0.6, Instagram-style editor with re-editing, and headless video and photo export (trim, crop, resize, LUT filters). Tested on Android (Pixel 8a, emulator) and the iOS simulator.
+> **Status**: 0.7, Instagram-style editor with re-editing, and headless video and photo export (trim, crop, resize, LUT filters). Tested on Android (Pixel 8a, emulator) and the iOS simulator.
 
 ## Editor
 
@@ -24,10 +24,11 @@ if (result != null) {
 ```
 
 - Tools: filters (tap again for the intensity), adjustments (brightness, contrast, saturation, warmth), crop (ratios, pan and pinch-zoom), trim for videos.
-- `EditorOptions`: the looks offered (`looks:`, default `Looks.builtIn`), the crop ratios (`aspects:`), `export: false` to only get the `EditSpec`, `outputPath`, `maxDimension` (1080 by default), `quality`, `keepLocation`, `minDuration` / `maxDuration` of the trim, and `texts:` to translate the labels (`EditorTexts`).
+- `EditorOptions`: the looks offered (`looks:`, default `Looks.builtIn`), the crop ratios (`aspects:`), `export: false` to only get the `EditSpec`, `outputPath`, `maxDimension` (1080 by default), `quality`, `keepLocation`, `minDuration` / `maxDuration` of the trim, and `texts:` to translate the labels (`EditorTexts`). Both have a `copyWith`.
 - Your own filters: `Look('Name', await CubeLut.fromFile(path))` or `Look.generate('Name', (r, g, b) => ...)`.
 - Reopen the editor where the user left off: save `result.state.toJson()` (an `EditorState`), and pass `EditorState.fromJson(...)` as `initialState:` to `FilmkitEditor.open` on the same file.
-- `FilmkitEditorPage` is the screen itself, for apps that handle navigation themselves.
+- `FilmkitEditor.open(title:)` shows a title in the app bar, e.g. "2/4" when editing several files in a row.
+- `FilmkitEditorPage` is the screen itself, for apps that handle navigation themselves. `CropView` is the crop tool's view (a `CropState` over any child), e.g. for a crop preview in a picker.
 - Adjustments only change colors, so they are baked into the look's LUT: the exporters only ever apply one table. The result's `edit.lut` is that combined table, written to the temporary directory.
 
 ## With insta_assets_picker

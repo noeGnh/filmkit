@@ -44,6 +44,7 @@ void main() {
     String path = '/media/photo.jpg',
     EditorOptions options = const EditorOptions(export: false),
     EditorState? initialState,
+    String? title,
     bool waitLoaded = true,
   }) async {
     tester.view.physicalSize = const Size(1080, 2340);
@@ -57,7 +58,7 @@ void main() {
           builder: (context) => TextButton(
             key: const ValueKey('open'),
             onPressed: () async {
-              result = await FilmkitEditor.open(context, path: path, options: options, initialState: initialState);
+              result = await FilmkitEditor.open(context, path: path, options: options, initialState: initialState, title: title);
               closed = true;
             },
             child: const Text('open'),
@@ -89,6 +90,12 @@ void main() {
   }
 
   group('photo', () {
+    testWidgets('shows the title', (tester) async {
+      await open(tester, title: '2/4');
+      expect(find.text('2/4'), findsOneWidget);
+      await unmount(tester);
+    });
+
     testWidgets('loads a downscaled preview, then returns the edits', (tester) async {
       final editor = await open(tester, options: EditorOptions(export: false, looks: [mono, warm]));
       final previewCall = filmkit.imageCalls.single;

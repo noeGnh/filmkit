@@ -6,7 +6,15 @@ import 'crop_state.dart';
 /// [interactive], the media can be panned and zoomed under the frame, over a rule-of-thirds
 /// grid.
 class CropView extends StatefulWidget {
-  const CropView({super.key, required this.state, required this.onChanged, required this.interactive, required this.child, this.frameBuilder});
+  const CropView({
+    super.key,
+    required this.state,
+    required this.onChanged,
+    required this.interactive,
+    required this.child,
+    this.frameBuilder,
+    this.showGrid,
+  });
 
   final CropState state;
   final ValueChanged<CropState> onChanged;
@@ -16,6 +24,10 @@ class CropView extends StatefulWidget {
   /// Wraps the visible (clipped) frame, e.g. in a `LutFilter`, so that effects only process
   /// what is shown.
   final Widget Function(Widget frame)? frameBuilder;
+
+  /// Whether the rule-of-thirds grid and the frame border are drawn; by default when
+  /// [interactive]. A picker can show them only while the media is touched.
+  final bool? showGrid;
 
   @override
   State<CropView> createState() => _CropViewState();
@@ -85,7 +97,7 @@ class _CropViewState extends State<CropView> {
                 fit: StackFit.expand,
                 children: [
                   frame,
-                  if (widget.interactive) const IgnorePointer(child: CustomPaint(painter: _GridPainter())),
+                  if (widget.showGrid ?? widget.interactive) const IgnorePointer(child: CustomPaint(painter: _GridPainter())),
                 ],
               ),
             ),

@@ -43,6 +43,38 @@ class EditorTexts {
   final String cancel;
   final String exportFailed;
   final String loadFailed;
+
+  EditorTexts copyWith({
+    String? done,
+    String? crop,
+    String? trim,
+    String? filters,
+    String? adjust,
+    String? normal,
+    String? brightness,
+    String? contrast,
+    String? saturation,
+    String? warmth,
+    String? exporting,
+    String? cancel,
+    String? exportFailed,
+    String? loadFailed,
+  }) => EditorTexts(
+    done: done ?? this.done,
+    crop: crop ?? this.crop,
+    trim: trim ?? this.trim,
+    filters: filters ?? this.filters,
+    adjust: adjust ?? this.adjust,
+    normal: normal ?? this.normal,
+    brightness: brightness ?? this.brightness,
+    contrast: contrast ?? this.contrast,
+    saturation: saturation ?? this.saturation,
+    warmth: warmth ?? this.warmth,
+    exporting: exporting ?? this.exporting,
+    cancel: cancel ?? this.cancel,
+    exportFailed: exportFailed ?? this.exportFailed,
+    loadFailed: loadFailed ?? this.loadFailed,
+  );
 }
 
 @immutable
@@ -86,6 +118,32 @@ class EditorOptions {
   final Duration? maxDuration;
 
   final EditorTexts texts;
+
+  /// A copy with the given fields replaced. The nullable [looks], [outputPath], [maxDimension]
+  /// and [maxDuration] can't be reset to `null` this way.
+  EditorOptions copyWith({
+    List<Look>? looks,
+    List<CropAspect>? aspects,
+    bool? export,
+    String? outputPath,
+    int? maxDimension,
+    int? quality,
+    bool? keepLocation,
+    Duration? minDuration,
+    Duration? maxDuration,
+    EditorTexts? texts,
+  }) => EditorOptions(
+    looks: looks ?? this.looks,
+    aspects: aspects ?? this.aspects,
+    export: export ?? this.export,
+    outputPath: outputPath ?? this.outputPath,
+    maxDimension: maxDimension ?? this.maxDimension,
+    quality: quality ?? this.quality,
+    keepLocation: keepLocation ?? this.keepLocation,
+    minDuration: minDuration ?? this.minDuration,
+    maxDuration: maxDuration ?? this.maxDuration,
+    texts: texts ?? this.texts,
+  );
 }
 
 /// What the editor returns when the user taps Done.

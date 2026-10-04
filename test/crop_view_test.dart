@@ -1,5 +1,4 @@
 import 'package:filmkit/filmkit.dart';
-import 'package:filmkit/src/editor/crop_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -8,7 +7,7 @@ void main() {
 
   /// A 16:9 media under a square frame, in a 400 × 400 box: the frame is 400 px for 9/16 of the
   /// media width.
-  Future<void> pumpCrop(WidgetTester tester, {bool interactive = true, CropState? initial}) async {
+  Future<void> pumpCrop(WidgetTester tester, {bool interactive = true, bool? showGrid, CropState? initial}) async {
     state = initial ?? const CropState(mediaAspect: 16 / 9, aspect: CropAspect.square);
     await tester.pumpWidget(
       MaterialApp(
@@ -19,6 +18,7 @@ void main() {
               builder: (context, setState) => CropView(
                 state: state,
                 interactive: interactive,
+                showGrid: showGrid,
                 onChanged: (next) => setState(() => state = next),
                 frameBuilder: (frame) => KeyedSubtree(key: const ValueKey('wrapped'), child: frame),
                 child: const ColoredBox(key: ValueKey('media'), color: Colors.red),
@@ -75,5 +75,17 @@ void main() {
     await pumpCrop(tester, interactive: false);
     await tester.drag(find.byKey(const ValueKey('wrapped')), const Offset(100, 0));
     expect(state.center, const Offset(0.5, 0.5));
+  });
+
+  testWidgets('the grid follows interactive unless showGrid is set', (tester) async {
+    Finder grid() => find.descendant(of: find.byType(CropView), matching: find.byType(CustomPaint));
+    await pumpCrop(tester);
+    expect(grid(), findsOneWidget);
+    await pumpCrop(tester, interactive: false);
+    expect(grid(), findsNothing);
+    await pumpCrop(tester, showGrid: false);
+    expect(grid(), findsNothing);
+    await tester.drag(find.byKey(const ValueKey('wrapped')), const Offset(100, 0));
+    expect(state.center.dx, lessThan(0.5), reason: 'still interactive without the grid');
   });
 }
