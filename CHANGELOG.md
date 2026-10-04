@@ -1,3 +1,9 @@
+## 0.7.0
+
+* `CropView` is public: the crop tool's pan and pinch-zoom over any child, for a crop preview outside the editor (a picker). `showGrid:` hides the grid while it stays interactive.
+* `FilmkitEditor.open(title:)` / `FilmkitEditorPage.title`: a title in the app bar, e.g. "2/4" when editing several files in a row.
+* `EditorOptions.copyWith` and `EditorTexts.copyWith`.
+
 ## 0.6.2
 
 * Editor: pinch-to-zoom in the crop tool follows the fingers. When both fingers moved in the same frame, the second update started from the state before the first one: the zoom lagged and the image drifted sideways.

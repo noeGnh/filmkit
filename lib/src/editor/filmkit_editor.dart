@@ -27,17 +27,18 @@ abstract final class FilmkitEditor {
   /// taps Done, `null` if they close it. [isVideo] defaults to a guess from the extension.
   ///
   /// [initialState] reopens the editor with earlier choices (`EditorResult.state`) on the same
-  /// file.
+  /// file. [title] is shown in the app bar, e.g. "2/4" when editing several files in a row.
   static Future<EditorResult?> open(
     BuildContext context, {
     required String path,
     bool? isVideo,
     EditorOptions options = const EditorOptions(),
     EditorState? initialState,
+    String? title,
   }) => Navigator.of(context).push(
     MaterialPageRoute(
       fullscreenDialog: true,
-      builder: (_) => FilmkitEditorPage(path: path, isVideo: isVideo, options: options, initialState: initialState),
+      builder: (_) => FilmkitEditorPage(path: path, isVideo: isVideo, options: options, initialState: initialState, title: title),
     ),
   );
 }
@@ -50,12 +51,15 @@ enum _Adjustment { brightness, contrast, saturation, warmth }
 
 /// The editor screen, for apps that manage their own navigation: it pops an [EditorResult].
 class FilmkitEditorPage extends StatefulWidget {
-  const FilmkitEditorPage({super.key, required this.path, this.isVideo, this.options = const EditorOptions(), this.initialState});
+  const FilmkitEditorPage({super.key, required this.path, this.isVideo, this.options = const EditorOptions(), this.initialState, this.title});
 
   final String path;
   final bool? isVideo;
   final EditorOptions options;
   final EditorState? initialState;
+
+  /// Shown in the app bar.
+  final String? title;
 
   @override
   State<FilmkitEditorPage> createState() => _FilmkitEditorPageState();
@@ -304,6 +308,8 @@ class _FilmkitEditorPageState extends State<FilmkitEditorPage> {
         appBar: AppBar(
           backgroundColor: Colors.black,
           leading: IconButton(key: const ValueKey('filmkit.close'), icon: const Icon(Icons.close), onPressed: () => Navigator.of(context).pop()),
+          title: widget.title == null ? null : Text(widget.title!),
+          centerTitle: true,
           actions: [
             TextButton(
               key: const ValueKey('filmkit.done'),

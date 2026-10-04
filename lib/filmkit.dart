@@ -5,6 +5,7 @@ export 'src/cube_lut.dart';
 export 'src/edit_spec.dart';
 export 'src/editor/adjustments.dart';
 export 'src/editor/crop_state.dart';
+export 'src/editor/crop_view.dart';
 export 'src/editor/editor_options.dart';
 export 'src/editor/editor_state.dart';
 export 'src/editor/filmkit_editor.dart';

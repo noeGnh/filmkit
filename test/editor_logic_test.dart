@@ -167,4 +167,16 @@ void main() {
       expect(decoded.aspect, CropAspect.square);
     });
   });
+
+  test('copyWith replaces only the given options and texts', () {
+    const options = EditorOptions(quality: 75, maxDimension: 2048, texts: EditorTexts(done: 'OK'));
+    final copy = options.copyWith(export: false, texts: options.texts.copyWith(cancel: 'Annuler'));
+    expect(copy.export, isFalse);
+    expect(copy.quality, 75);
+    expect(copy.maxDimension, 2048);
+    expect(copy.aspects, CropAspect.defaults);
+    expect(copy.texts.done, 'OK');
+    expect(copy.texts.cancel, 'Annuler');
+    expect(copy.texts.trim, 'Trim');
+  });
 }
