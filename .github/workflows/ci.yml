@@ -83,7 +83,7 @@ jobs:
           disable-animations: true
           working-directory: example
           # EMULATOR=true: the emulator's graphics layer shifts the colors of Media3 exports.
-          script: flutter test integration_test --dart-define=EMULATOR=true
+          script: flutter test integration_test/all_test.dart --dart-define=EMULATOR=true
 
   ios:
     name: iOS build, unit and integration tests (simulator)
@@ -116,23 +116,12 @@ jobs:
           xcrun simctl bootstatus "$udid"
           flutter devices
           echo "udid=$udid" >> "$GITHUB_OUTPUT"
-      # Before xcodebuild test, which shuts the simulator down when it ends. The app's first
-      # launch on a fresh CI simulator sometimes never connects to the test runner: one retry,
-      # after a simulator reboot.
+      # Before xcodebuild test, which shuts the simulator down when it ends. All the tests run in
+      # one app launch (all_test.dart), with a watchdog that retries when flutter test misses the
+      # app's start (flutter/flutter#181771).
       - name: Integration tests
-        id: integration
-        continue-on-error: true
-        timeout-minutes: 20
-        run: flutter test integration_test -d ${{ steps.simulator.outputs.udid }}
-        working-directory: example
-      - name: Integration tests (retry)
-        if: steps.integration.outcome != 'success'
-        timeout-minutes: 20
-        run: |
-          xcrun simctl shutdown ${{ steps.simulator.outputs.udid }} || true
-          xcrun simctl boot ${{ steps.simulator.outputs.udid }}
-          xcrun simctl bootstatus ${{ steps.simulator.outputs.udid }}
-          flutter test integration_test -d ${{ steps.simulator.outputs.udid }}
+        timeout-minutes: 45
+        run: ../.github/scripts/ios_integration_tests.sh ${{ steps.simulator.outputs.udid }}
         working-directory: example
       - name: RunnerTests (native unit tests)
         working-directory: example/ios
